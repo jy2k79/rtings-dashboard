@@ -19,6 +19,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: 'pip'
+
+      - name: Restore SPD image cache
+        uses: actions/cache@v4
+        with:
+          path: spd_images
+          key: spd-images-${{ hashFiles('data/rtings_tv_data.csv') }}
+          restore-keys: spd-images-
 
       - name: Install dependencies
         run: pip install -r requirements.txt

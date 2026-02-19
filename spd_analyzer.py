@@ -695,6 +695,9 @@ def match_ground_truth(fullname, brand, lookup):
 # ============================================================================
 # MAIN ANALYSIS PIPELINE
 # ============================================================================
+IN_CI = bool(os.environ.get("GITHUB_ACTIONS"))
+
+
 def analyze_all_tvs():
     """Run SPD analysis on all scraped TVs."""
     # Load scraped data
@@ -756,11 +759,12 @@ def analyze_all_tvs():
             print(f" -> {analysis['classification']} ({analysis['confidence']})"
                   f"{' [' + match_status + ']' if gt_tech else ''}")
 
-            # Generate verification plot
-            safe_name = row['url_part'].replace('/', '-')
-            plot_path = CURVES_DIR / f"{safe_name}_spd_analysis.png"
-            plot_verification(wavelengths, intensities, analysis, fullname,
-                            gt_tech, str(plot_path))
+            # Generate verification plot (skip on CI to save time)
+            if not IN_CI:
+                safe_name = row['url_part'].replace('/', '-')
+                plot_path = CURVES_DIR / f"{safe_name}_spd_analysis.png"
+                plot_verification(wavelengths, intensities, analysis, fullname,
+                                gt_tech, str(plot_path))
 
             results.append({
                 'product_id': row['product_id'],
