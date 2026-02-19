@@ -1,0 +1,8 @@
+streamlit>=1.28
+pandas
+numpy
+plotly
+httpx
+python-dotenv
+openpyxl
+Pillow

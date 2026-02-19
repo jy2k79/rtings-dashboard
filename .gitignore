@@ -1,0 +1,36 @@
+# API keys
+.env
+
+# Large binary files (downloaded fresh each pipeline run)
+spd_images/
+spd_extracted_curves/
+
+# Timestamped scraper snapshots (accumulate locally, not needed in repo)
+data/rtings_tv_data_*.csv
+
+# Excel exports (regenerated from CSVs)
+data/*.xlsx
+
+# Raw API responses (debug only)
+data/raw/
+data/rtings_tv_data.json
+
+# Logs
+data/launchd_*.log
+data/pricing_log.txt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
+
+# Old scripts superseded by weekly_update.py
+run_pricing.sh
+
+# IDE / tools
+.vscode/
+.idea/
+.claude/
