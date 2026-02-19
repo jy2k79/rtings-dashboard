@@ -908,7 +908,10 @@ elif page == "Technology Explorer":
 
             st.divider()
             st.markdown("**Value Frontier: Price vs Performance**")
-            st.caption("Dashed line = efficient frontier (best score at each price point)")
+            st.caption("The dashed line traces the \"efficient frontier\" — TVs that offer "
+                       "the highest Mixed Usage score for their price. Any TV on or near "
+                       "the line is the best performance you can buy at that budget. "
+                       "TVs far below the line are overpriced for what they deliver.")
             fig = px.scatter(val_priced, x="price_best", y="mixed_usage",
                              color="color_architecture", color_discrete_map=TECH_COLORS,
                              hover_name="fullname",
@@ -989,6 +992,8 @@ elif page == "Price Analyzer":
             key="value_score",
         )
         score_label = friendly(score_metric)
+        st.caption("The dashed \"Value Frontier\" traces the best-performing TV at each price point. "
+                   "TVs on the line are the best you can buy at that budget; TVs below it are overpriced for their score.")
 
         fig = px.scatter(priced, x="price_best", y=score_metric,
                          color="color_architecture", color_discrete_map=TECH_COLORS,
