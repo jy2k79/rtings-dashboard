@@ -272,7 +272,7 @@ def chart_new_model_scorecard(new_tvs, db, output_path):
 # Chart 5: Average Price by Technology (bar)
 # ---------------------------------------------------------------------------
 def chart_price_by_tech(db, output_path):
-    """Bar chart of median $/m² by technology with WLED premium annotations."""
+    """Bar chart of average $/m² by technology with WLED premium annotations."""
     _setup_style()
 
     priced = db.dropna(subset=['price_per_m2', 'color_architecture'])
@@ -283,19 +283,19 @@ def chart_price_by_tech(db, output_path):
     if not ordered:
         return None
 
-    medians = [priced[priced['color_architecture'] == t]['price_per_m2'].median()
-               for t in ordered]
+    averages = [priced[priced['color_architecture'] == t]['price_per_m2'].mean()
+                for t in ordered]
     colors = [_tech_color(t) for t in ordered]
 
     # Compute premium over WLED baseline
     wled_baseline = None
     if 'WLED' in ordered:
-        wled_baseline = medians[ordered.index('WLED')]
+        wled_baseline = averages[ordered.index('WLED')]
 
     fig, ax = plt.subplots(figsize=FIG_SIZE, facecolor=DARK_BG)
-    bars = ax.bar(ordered, medians, color=colors, alpha=0.85, edgecolor='none')
+    bars = ax.bar(ordered, averages, color=colors, alpha=0.85, edgecolor='none')
 
-    for bar, val, tech in zip(bars, medians, ordered):
+    for bar, val, tech in zip(bars, averages, ordered):
         label = f'${val:,.0f}'
         if wled_baseline and tech != 'WLED':
             pct = (val - wled_baseline) / wled_baseline * 100
@@ -304,8 +304,8 @@ def chart_price_by_tech(db, output_path):
                 label, ha='center', va='bottom',
                 color=TEXT_COLOR, fontsize=10, fontweight='bold')
 
-    ax.set_ylabel('Median Price per m²')
-    ax.set_title('Technology Cost per m² (size-normalized)',
+    ax.set_ylabel('Average Price per m\u00b2')
+    ax.set_title('Technology Cost per m\u00b2 (size-normalized)',
                  color=TEXT_COLOR, fontsize=13, fontweight='bold')
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(
         lambda x, p: f'${x:,.0f}'))
@@ -323,7 +323,7 @@ def chart_price_by_tech(db, output_path):
 # Chart 6: Price Trends (line)
 # ---------------------------------------------------------------------------
 def chart_price_trends(price_history, output_path):
-    """Line chart of average price over time by technology.
+    """Line chart of average $/m² over time by technology.
     Returns None if fewer than 2 weekly snapshots.
     """
     _setup_style()
@@ -335,20 +335,36 @@ def chart_price_trends(price_history, output_path):
     if n_snapshots < 2:
         return None
 
+    # Screen area lookup (diagonal inches → m²) for $/m² calculation
+    screen_area_m2 = {
+        32: 0.22, 40: 0.34, 42: 0.38, 43: 0.40, 48: 0.50,
+        50: 0.54, 55: 0.65, 58: 0.72, 60: 0.77, 65: 0.91,
+        70: 1.06, 75: 1.21, 77: 1.28, 80: 1.38, 83: 1.49,
+        85: 1.56, 86: 1.59, 98: 2.07, 100: 2.15,
+    }
+
+    hist = price_history.copy()
+    hist['screen_area_m2'] = hist['size_inches'].map(screen_area_m2)
+    hist['price_per_m2'] = hist['best_price'] / hist['screen_area_m2']
+    hist = hist.dropna(subset=['price_per_m2'])
+
+    if len(hist) == 0:
+        return None
+
     fig, ax = plt.subplots(figsize=FIG_SIZE, facecolor=DARK_BG)
 
     for tech in TECH_ORDER:
-        tech_data = price_history[price_history['color_architecture'] == tech]
+        tech_data = hist[hist['color_architecture'] == tech]
         if len(tech_data) == 0:
             continue
-        weekly_avg = (tech_data.groupby('snapshot_date')['best_price']
+        weekly_avg = (tech_data.groupby('snapshot_date')['price_per_m2']
                       .mean().sort_index())
         ax.plot(weekly_avg.index, weekly_avg.values,
                 color=_tech_color(tech), linewidth=2, marker='o',
                 markersize=5, label=tech)
 
-    ax.set_ylabel('Average Price ($)')
-    ax.set_title('Price Trends by Technology', color=TEXT_COLOR,
+    ax.set_ylabel('Average $/m\u00b2')
+    ax.set_title('Price Trends by Technology ($/m\u00b2)', color=TEXT_COLOR,
                  fontsize=13, fontweight='bold')
     ax.yaxis.set_major_formatter(mticker.FuncFormatter(
         lambda x, p: f'${x:,.0f}'))

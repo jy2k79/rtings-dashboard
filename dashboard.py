@@ -1040,18 +1040,18 @@ elif page == "Price Analyzer":
 
     # --- Headline: Technology Cost per m² with WLED premium ---
     st.subheader("Technology Cost per m\u00b2")
-    st.caption("Median price per square meter by display technology, with premium over WLED baseline. "
+    st.caption("Average price per square meter by display technology, with premium over WLED baseline. "
                "Size-normalized pricing gives the truest comparison across technologies.")
 
     m2_data = (priced.dropna(subset=["price_per_m2"])
                .groupby("color_architecture", observed=True)["price_per_m2"]
-               .median().reset_index())
-    m2_data.columns = ["Technology", "Median $/m\u00b2"]
-    wled_baseline = m2_data.loc[m2_data["Technology"] == "WLED", "Median $/m\u00b2"]
+               .mean().reset_index())
+    m2_data.columns = ["Technology", "Avg $/m\u00b2"]
+    wled_baseline = m2_data.loc[m2_data["Technology"] == "WLED", "Avg $/m\u00b2"]
     wled_val = float(wled_baseline.iloc[0]) if len(wled_baseline) > 0 else None
 
-    fig = px.bar(m2_data, x="Technology", y="Median $/m\u00b2", color="Technology",
-                 color_discrete_map=TECH_COLORS, text="Median $/m\u00b2",
+    fig = px.bar(m2_data, x="Technology", y="Avg $/m\u00b2", color="Technology",
+                 color_discrete_map=TECH_COLORS, text="Avg $/m\u00b2",
                  category_orders={"Technology": TECH_ORDER})
     fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside",
                       textfont_size=14, textfont_weight=600, cliponaxis=False)
@@ -1064,7 +1064,7 @@ elif page == "Price Analyzer":
     st.plotly_chart(fig, use_container_width=True)
 
     # Premium metrics row
-    m2_col = "Median $/m\u00b2"
+    m2_col = "Avg $/m\u00b2"
     if wled_val and wled_val > 0:
         techs_with_m2 = m2_data[m2_data["Technology"] != "WLED"].sort_values(m2_col)
         mcols = st.columns(len(techs_with_m2))
@@ -1200,7 +1200,16 @@ elif page == "Price Analyzer":
             st.dataframe(pd.DataFrame(best_per_tech), use_container_width=True, hide_index=True)
 
     with tab4:
-        st.subheader("Average Price by Technology Over Time")
+        st.subheader("Average $/m\u00b2 by Technology Over Time")
+
+        # Screen area lookup (diagonal inches → m²) for $/m² from price history
+        _SCREEN_AREA_M2 = {
+            32: 0.22, 40: 0.34, 42: 0.38, 43: 0.40, 48: 0.50,
+            50: 0.54, 55: 0.65, 58: 0.72, 60: 0.77, 65: 0.91,
+            70: 1.06, 75: 1.21, 77: 1.28, 80: 1.38, 83: 1.49,
+            85: 1.56, 86: 1.59, 98: 2.07, 100: 2.15,
+        }
+
         if len(history_df) == 0:
             st.info("No price history available yet. Run the pricing pipeline "
                     "(ideally every Monday) to accumulate weekly data.")
@@ -1209,11 +1218,16 @@ elif page == "Price Analyzer":
             if len(hist_filtered) == 0:
                 st.info("No price history for selected technologies.")
             else:
-                # Aggregate to ISO weeks — average all snapshots within the same week
-                hist_filtered["iso_year"] = hist_filtered["snapshot_date"].dt.isocalendar().year.astype(int)
-                hist_filtered["iso_week"] = hist_filtered["snapshot_date"].dt.isocalendar().week.astype(int)
+                # Compute $/m² from size_inches and best_price
+                hist_filtered["screen_area_m2"] = hist_filtered["size_inches"].map(_SCREEN_AREA_M2)
+                hist_filtered["price_per_m2"] = hist_filtered["best_price"] / hist_filtered["screen_area_m2"]
+                hist_m2 = hist_filtered.dropna(subset=["price_per_m2"])
+
+                # Aggregate to ISO weeks — average $/m² within the same week
+                hist_m2["iso_year"] = hist_m2["snapshot_date"].dt.isocalendar().year.astype(int)
+                hist_m2["iso_week"] = hist_m2["snapshot_date"].dt.isocalendar().week.astype(int)
                 weekly = (
-                    hist_filtered.groupby(["iso_year", "iso_week", "color_architecture"])["best_price"]
+                    hist_m2.groupby(["iso_year", "iso_week", "color_architecture"])["price_per_m2"]
                     .mean().reset_index()
                 )
 
@@ -1227,15 +1241,15 @@ elif page == "Price Analyzer":
                     weekly["_sort"] = weekly["iso_year"] * 100 + weekly["iso_week"]
                 weekly = weekly.sort_values("_sort")
                 weekly.rename(columns={"color_architecture": "Technology",
-                                       "best_price": "Avg Price"}, inplace=True)
+                                       "price_per_m2": "Avg $/m\u00b2"}, inplace=True)
 
                 n_weeks = weekly["Week"].nunique()
 
                 fig = px.line(
-                    weekly, x="Week", y="Avg Price",
+                    weekly, x="Week", y="Avg $/m\u00b2",
                     color="Technology", color_discrete_map=TECH_COLORS,
                     markers=True,
-                    labels={"Avg Price": "Average Price ($)", "Week": ""},
+                    labels={"Avg $/m\u00b2": "Average $/m\u00b2", "Week": ""},
                     category_orders={"Week": weekly["Week"].unique().tolist(),
                                      "Technology": TECH_ORDER},
                 )
@@ -1247,7 +1261,7 @@ elif page == "Price Analyzer":
                 st.plotly_chart(fig, use_container_width=True)
 
                 # Optional size filter for a second chart
-                available_sizes = sorted(hist_filtered["size_inches"].dropna().unique())
+                available_sizes = sorted(hist_m2["size_inches"].dropna().unique())
                 if len(available_sizes) > 1:
                     size_filter = st.selectbox(
                         "Filter by screen size",
@@ -1256,9 +1270,9 @@ elif page == "Price Analyzer":
                     )
                     if size_filter != "All sizes":
                         size_val = int(size_filter.replace('"', ''))
-                        hist_sized = hist_filtered[hist_filtered["size_inches"] == size_val]
+                        hist_sized = hist_m2[hist_m2["size_inches"] == size_val]
                         weekly2 = (
-                            hist_sized.groupby(["iso_year", "iso_week", "color_architecture"])["best_price"]
+                            hist_sized.groupby(["iso_year", "iso_week", "color_architecture"])["price_per_m2"]
                             .mean().reset_index()
                         )
                         if n_years <= 1:
@@ -1269,12 +1283,12 @@ elif page == "Price Analyzer":
                             weekly2["_sort"] = weekly2["iso_year"] * 100 + weekly2["iso_week"]
                         weekly2 = weekly2.sort_values("_sort")
                         weekly2.rename(columns={"color_architecture": "Technology",
-                                                "best_price": "Avg Price"}, inplace=True)
+                                                "price_per_m2": "Avg $/m\u00b2"}, inplace=True)
                         fig2 = px.line(
-                            weekly2, x="Week", y="Avg Price",
+                            weekly2, x="Week", y="Avg $/m\u00b2",
                             color="Technology", color_discrete_map=TECH_COLORS,
                             markers=True,
-                            labels={"Avg Price": f'Average Price ($) \u2014 {size_filter}', "Week": ""},
+                            labels={"Avg $/m\u00b2": f'Average $/m\u00b2 \u2014 {size_filter}', "Week": ""},
                             category_orders={"Week": weekly2["Week"].unique().tolist(),
                                              "Technology": TECH_ORDER},
                         )

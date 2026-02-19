@@ -231,16 +231,16 @@ def compute_pricing_metrics(db, price_history):
     priced = db.dropna(subset=["price_best"])
     n_priced = len(priced)
 
-    # Median $/m² by tech (size-normalized, most meaningful for QD suppliers)
+    # Average $/m² by tech (size-normalized, most meaningful for QD suppliers)
     price_per_m2 = {}
-    median_price = {}
+    avg_price = {}
     for tech in TECH_ORDER:
         subset = priced[priced["color_architecture"] == tech]
         if len(subset) > 0:
-            median_price[tech] = round(float(subset["price_best"].median()), 0)
+            avg_price[tech] = round(float(subset["price_best"].mean()), 0)
             m2_vals = subset["price_per_m2"].dropna()
             if len(m2_vals) > 0:
-                price_per_m2[tech] = round(float(m2_vals.median()), 0)
+                price_per_m2[tech] = round(float(m2_vals.mean()), 0)
 
     # QD premium over WLED baseline
     wled_m2 = price_per_m2.get("WLED")
@@ -301,7 +301,7 @@ def compute_pricing_metrics(db, price_history):
 
     return {
         "n_priced": n_priced,
-        "median_price_by_tech": median_price,
+        "avg_price_by_tech": avg_price,
         "price_per_m2_by_tech": price_per_m2,
         "tech_premium_vs_wled": tech_premium,
         "top_value_tvs": top_value,
