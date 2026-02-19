@@ -268,6 +268,100 @@ def extract_spd_curve(image_path):
 # ============================================================================
 # SPECTRAL ANALYSIS
 # ============================================================================
+def _measure_fwhm_robust(wavelengths, intensities, peak_idx, all_peaks_idx,
+                         samples_per_nm):
+    """
+    Overlap-aware FWHM measurement.
+
+    For well-separated peaks, uses standard scipy peak_widths (prominence-based).
+    For overlapping peaks (e.g. WLED green/red sharing a broad phosphor hump),
+    measures the half-width on the uncontaminated side and doubles it (HWHM
+    mirroring).  This avoids the artifact where prominence-based measurement
+    gives artificially narrow FWHM when the valley between peaks is high.
+
+    Returns (fwhm_nm, method_str).
+    """
+    peak_height = intensities[peak_idx]
+    half_max_abs = peak_height / 2.0
+
+    # --- Standard prominence-based FWHM (baseline) ---
+    w = peak_widths(intensities, [peak_idx], rel_height=0.5)
+    standard_fwhm = w[0][0] / samples_per_nm
+
+    # --- Detect overlap on each side ---
+    overlap_left = False
+    overlap_right = False
+    OVERLAP_THRESH = 0.50  # valley > 50% of shorter peak → overlapping
+
+    for nb in all_peaks_idx:
+        if nb == peak_idx:
+            continue
+        if nb < peak_idx:
+            valley = np.min(intensities[nb:peak_idx + 1])
+            shorter = min(peak_height, intensities[nb])
+            if shorter > 0 and valley / shorter > OVERLAP_THRESH:
+                overlap_left = True
+        else:
+            valley = np.min(intensities[peak_idx:nb + 1])
+            shorter = min(peak_height, intensities[nb])
+            if shorter > 0 and valley / shorter > OVERLAP_THRESH:
+                overlap_right = True
+
+    if not overlap_left and not overlap_right:
+        return standard_fwhm, 'standard'
+
+    # --- HWHM mirroring from the clean side ---
+    # Compute HWHM from the uncontaminated side and double it.
+    # Then take the MAX of standard and HWHM to handle asymmetric peaks:
+    #   - Green phosphor peak: left side is steep, standard is wider → keeps standard
+    #   - Red phosphor peak: standard is artificially narrow → HWHM wins
+    def _right_hwhm():
+        for i in range(peak_idx + 1, len(intensities)):
+            if intensities[i] <= half_max_abs:
+                frac = ((intensities[i - 1] - half_max_abs)
+                        / (intensities[i - 1] - intensities[i]))
+                return (i - 1 + frac - peak_idx) / samples_per_nm
+        return None
+
+    def _left_hwhm():
+        for i in range(peak_idx - 1, -1, -1):
+            if intensities[i] <= half_max_abs:
+                frac = ((intensities[i + 1] - half_max_abs)
+                        / (intensities[i + 1] - intensities[i]))
+                return (peak_idx - (i + 1 - frac)) / samples_per_nm
+        return None
+
+    hwhm_fwhm = None
+    hwhm_side = None
+
+    if overlap_left and not overlap_right:
+        hw = _right_hwhm()
+        if hw is not None:
+            hwhm_fwhm = 2.0 * hw
+            hwhm_side = 'right'
+    elif overlap_right and not overlap_left:
+        hw = _left_hwhm()
+        if hw is not None:
+            hwhm_fwhm = 2.0 * hw
+            hwhm_side = 'left'
+    else:
+        # Both sides overlap — try right first (red tail is usually clean)
+        hw = _right_hwhm()
+        if hw is not None:
+            hwhm_fwhm = 2.0 * hw
+            hwhm_side = 'right'
+        else:
+            hw = _left_hwhm()
+            if hw is not None:
+                hwhm_fwhm = 2.0 * hw
+                hwhm_side = 'left'
+
+    if hwhm_fwhm is not None and hwhm_fwhm > standard_fwhm:
+        return hwhm_fwhm, f'hwhm_{hwhm_side}'
+
+    return standard_fwhm, 'standard'
+
+
 def analyze_spd(wavelengths, intensities, panel_type='', panel_sub_type=''):
     """
     Analyze an extracted SPD curve. Detects peaks, measures FWHM,
@@ -293,17 +387,18 @@ def analyze_spd(wavelengths, intensities, panel_type='', panel_sub_type=''):
             'notes': 'No peaks detected'
         }
 
-    # Calculate FWHM
-    widths_result = peak_widths(intensities, peaks_idx, rel_height=0.5)
-
+    # Calculate FWHM with overlap-aware measurement
     peak_data = []
-    for i, idx in enumerate(peaks_idx):
+    for idx in peaks_idx:
         wl = wavelengths[idx]
-        fwhm_nm = widths_result[0][i] / samples_per_nm
+        fwhm_nm, method = _measure_fwhm_robust(
+            wavelengths, intensities, idx, peaks_idx, samples_per_nm
+        )
         peak_data.append({
             'wavelength': wl,
             'intensity': intensities[idx],
             'fwhm_nm': fwhm_nm,
+            'fwhm_method': method,
             'index': idx,
         })
 
@@ -349,6 +444,11 @@ def classify_spd(all_peaks, blue, green, red, panel_type='', panel_sub_type=''):
     notes.append(f"B:{blue_wl:.0f}nm/{blue_fwhm:.0f}nm" if blue else "No blue")
     notes.append(f"G:{green_wl:.0f}nm/{green_fwhm:.0f}nm" if green else "No green")
     notes.append(f"R:{red_wl:.0f}nm/{red_fwhm:.0f}nm" if red else "No red")
+
+    # Note any HWHM-mirrored measurements for transparency
+    for label, peak in [('G', green), ('R', red)]:
+        if peak and peak.get('fwhm_method', 'standard') != 'standard':
+            notes.append(f"{label}:fwhm_via_{peak['fwhm_method']}")
 
     sub = panel_sub_type.upper().strip()
     is_oled = panel_type.upper() == 'OLED'
