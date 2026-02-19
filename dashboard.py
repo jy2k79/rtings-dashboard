@@ -174,6 +174,9 @@ MARKER = dict(size=11)
 # ---------------------------------------------------------------------------
 DATA_DIR = Path(__file__).parent / "data"
 
+# Canonical technology ordering (left-to-right: low → high QD content)
+TECH_ORDER = ["WLED", "KSF", "Pseudo QD", "QD-LCD", "WOLED", "QD-OLED"]
+
 
 @st.cache_data
 def load_data():
@@ -196,9 +199,8 @@ def load_data():
     for col in numeric_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce")
-    tech_order = ["WLED", "KSF", "Pseudo QD", "QD-LCD", "WOLED", "QD-OLED"]
     df["color_architecture"] = pd.Categorical(
-        df["color_architecture"], categories=tech_order, ordered=True
+        df["color_architecture"], categories=TECH_ORDER, ordered=True
     )
     return df
 
@@ -417,10 +419,11 @@ if page == "Overview":
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Color Architecture Distribution")
-        tech_counts = fdf["color_architecture"].value_counts().reset_index()
+        tech_counts = fdf["color_architecture"].value_counts().reindex(TECH_ORDER).dropna().reset_index()
         tech_counts.columns = ["Technology", "Count"]
         fig = px.bar(tech_counts, x="Technology", y="Count", color="Technology",
-                     color_discrete_map=TECH_COLORS, text="Count")
+                     color_discrete_map=TECH_COLORS, text="Count",
+                     category_orders={"Technology": TECH_ORDER})
         fig.update_layout(showlegend=False, height=350, **PL)
         fig.update_traces(textposition="outside", textfont_size=14, textfont_weight=600,
                           cliponaxis=False)
@@ -441,6 +444,7 @@ if page == "Overview":
         if len(priced) > 0:
             fig = px.histogram(priced, x="price_best", nbins=25,
                                color="color_architecture", color_discrete_map=TECH_COLORS,
+                               category_orders={"color_architecture": TECH_ORDER},
                                labels={"price_best": "Price ($)", "color_architecture": "Technology"})
             fig.update_layout(height=350, barmode="stack", legend_title_text="",
                               xaxis=dict(range=axis_range("price_best")), **PL)
@@ -453,6 +457,7 @@ if page == "Overview":
         if len(priced) > 0:
             fig = px.box(priced, x="color_architecture", y="price_best",
                          color="color_architecture", color_discrete_map=TECH_COLORS,
+                         category_orders={"color_architecture": TECH_ORDER},
                          labels={"price_best": "Price ($)", "color_architecture": "Technology"},
                          points="all")
             fig.update_layout(showlegend=False, height=350,
@@ -470,7 +475,9 @@ if page == "Overview":
     )
     score_data["Usage"] = score_data["Usage"].map(friendly)
     fig = px.box(score_data, x="Usage", y="Score", color="color_architecture",
-                 color_discrete_map=TECH_COLORS, labels={"color_architecture": "Technology"})
+                 color_discrete_map=TECH_COLORS,
+                 category_orders={"color_architecture": TECH_ORDER},
+                 labels={"color_architecture": "Technology"})
     fig.update_layout(height=400, legend_title_text="",
                       yaxis=dict(range=axis_range("mixed_usage")), **PL)
     fig.update_traces(marker=dict(size=7))
@@ -510,6 +517,7 @@ elif page == "Technology Explorer":
             st.markdown("**Green Peak FWHM by Technology**")
             fig = px.strip(fdf, x="color_architecture", y="green_fwhm_nm",
                            color="color_architecture", color_discrete_map=TECH_COLORS,
+                           category_orders={"color_architecture": TECH_ORDER},
                            hover_name="fullname",
                            labels={"green_fwhm_nm": "Green FWHM (nm)", "color_architecture": ""})
             fig.add_hline(y=28, line_dash="dash", line_color="gray",
@@ -519,7 +527,7 @@ elif page == "Technology Explorer":
                           annotation_text="Pseudo QD threshold (40nm)",
                           annotation_font_size=12)
             fig.update_layout(showlegend=False, height=450,
-                              yaxis=dict(range=axis_range("green_fwhm_nm")), **PL)
+                              yaxis=dict(range=[0, 60]), **PL)
             fig.update_traces(marker=dict(size=10))
             st.plotly_chart(fig, use_container_width=True)
 
@@ -528,6 +536,7 @@ elif page == "Technology Explorer":
             valid_red = fdf[fdf["red_fwhm_nm"].notna()]
             fig = px.strip(valid_red, x="color_architecture", y="red_fwhm_nm",
                            color="color_architecture", color_discrete_map=TECH_COLORS,
+                           category_orders={"color_architecture": TECH_ORDER},
                            hover_name="fullname",
                            labels={"red_fwhm_nm": "Red FWHM (nm)", "color_architecture": ""})
             fig.add_hline(y=10, line_dash="dash", line_color="gray",
@@ -537,7 +546,7 @@ elif page == "Technology Explorer":
                           annotation_text="Broad threshold",
                           annotation_font_size=12)
             fig.update_layout(showlegend=False, height=450,
-                              yaxis=dict(range=axis_range("red_fwhm_nm")), **PL)
+                              yaxis=dict(range=[0, 60]), **PL)
             fig.update_traces(marker=dict(size=10))
             st.plotly_chart(fig, use_container_width=True)
 
@@ -545,6 +554,7 @@ elif page == "Technology Explorer":
         valid_both = fdf[fdf["green_fwhm_nm"].notna() & fdf["red_fwhm_nm"].notna()]
         fig = px.scatter(valid_both, x="green_fwhm_nm", y="red_fwhm_nm",
                          color="color_architecture", color_discrete_map=TECH_COLORS,
+                         category_orders={"color_architecture": TECH_ORDER},
                          hover_name="fullname", hover_data=["brand", "marketing_label"],
                          labels={"green_fwhm_nm": "Green FWHM (nm)", "red_fwhm_nm": "Red FWHM (nm)"})
         fig.add_shape(type="rect", x0=0, x1=28, y0=0, y1=28,
@@ -553,8 +563,8 @@ elif page == "Technology Explorer":
         fig.add_annotation(x=14, y=2, text="QD-LCD zone", showarrow=False,
                            font=dict(color="rgba(255,199,0,0.8)", size=13))
         fig.update_layout(height=500, legend_title_text="Technology",
-                          xaxis=dict(range=axis_range("green_fwhm_nm")),
-                          yaxis=dict(range=axis_range("red_fwhm_nm")), **PL)
+                          xaxis=dict(range=[0, 60]),
+                          yaxis=dict(range=[0, 60]), **PL)
         fig.update_traces(marker=MARKER)
         st.plotly_chart(fig, use_container_width=True)
 
@@ -574,7 +584,6 @@ elif page == "Technology Explorer":
         )
 
         valid = fdf[fdf[metric].notna()].copy()
-        tech_order = valid["color_architecture"].cat.categories.tolist()
 
         # Native contrast: OLEDs have infinite values (perfect blacks).
         # Show only finite data in the box plot; add colored bars at top for OLEDs.
@@ -583,7 +592,7 @@ elif page == "Technology Explorer":
             finite = valid[np.isfinite(valid[metric])]
             fig = px.box(finite, x="color_architecture", y=metric,
                          color="color_architecture", color_discrete_map=TECH_COLORS,
-                         category_orders={"color_architecture": tech_order},
+                         category_orders={"color_architecture": TECH_ORDER},
                          points="all", hover_name="fullname",
                          labels={metric: friendly(metric), "color_architecture": ""})
             y_range = axis_range(metric, data_df=finite)
@@ -592,7 +601,7 @@ elif page == "Technology Explorer":
             # Add colored "∞" bars at the top for each OLED technology
             ymax = y_range[1] if y_range else 10000
             for tech in inf_techs:
-                xi = tech_order.index(tech) if tech in tech_order else -1
+                xi = TECH_ORDER.index(tech) if tech in TECH_ORDER else -1
                 if xi < 0:
                     continue
                 color = TECH_COLORS.get(tech, "#888")
@@ -605,7 +614,7 @@ elif page == "Technology Explorer":
         else:
             fig = px.box(valid, x="color_architecture", y=metric,
                          color="color_architecture", color_discrete_map=TECH_COLORS,
-                         category_orders={"color_architecture": tech_order},
+                         category_orders={"color_architecture": TECH_ORDER},
                          points="all", hover_name="fullname",
                          labels={metric: friendly(metric), "color_architecture": ""})
             fig.update_layout(showlegend=False, height=500,
@@ -691,6 +700,7 @@ elif page == "Technology Explorer":
                 fig = px.box(
                     valid_r, x="color_architecture", y=resp_col,
                     color="color_architecture", color_discrete_map=TECH_COLORS,
+                    category_orders={"color_architecture": TECH_ORDER},
                     points="all", hover_name="fullname",
                     labels={resp_col: resp_label, "color_architecture": ""},
                 )
@@ -842,6 +852,7 @@ elif page == "Technology Explorer":
             valid = fdf[["contrast_ratio_score", "mixed_usage", "color_architecture", "fullname"]].dropna()
             fig = px.scatter(valid, x="contrast_ratio_score", y="mixed_usage",
                              color="color_architecture", color_discrete_map=TECH_COLORS,
+                             category_orders={"color_architecture": TECH_ORDER},
                              hover_name="fullname",
                              labels={"contrast_ratio_score": "Contrast Ratio Score",
                                      "mixed_usage": "Mixed Usage"})
@@ -866,6 +877,7 @@ elif page == "Technology Explorer":
             valid = fdf[["total_response_time_ms", "mixed_usage", "color_architecture", "fullname"]].dropna()
             fig = px.scatter(valid, x="total_response_time_ms", y="mixed_usage",
                              color="color_architecture", color_discrete_map=TECH_COLORS,
+                             category_orders={"color_architecture": TECH_ORDER},
                              hover_name="fullname",
                              labels={"total_response_time_ms": "Response Time (ms)",
                                      "mixed_usage": "Mixed Usage"})
@@ -895,6 +907,7 @@ elif page == "Technology Explorer":
             fig = px.scatter(
                 pos_valid, x="hdr_peak_10pct_nits", y="hdr_bt2020_coverage_itp_pct",
                 color="color_architecture", color_discrete_map=TECH_COLORS,
+                category_orders={"color_architecture": TECH_ORDER},
                 size="mixed_usage", size_max=22,
                 hover_name="fullname", hover_data=["brand", "price_best"],
                 labels={
@@ -922,6 +935,7 @@ elif page == "Technology Explorer":
         else:
             fig = px.box(val_priced, x="color_architecture", y="price_per_mixed_use",
                          color="color_architecture", color_discrete_map=TECH_COLORS,
+                         category_orders={"color_architecture": TECH_ORDER},
                          points="all", hover_name="fullname",
                          labels={"price_per_mixed_use": "$ per Mixed Usage Point",
                                  "color_architecture": ""})
@@ -943,6 +957,7 @@ elif page == "Technology Explorer":
                        "TVs far below the line are overpriced for what they deliver.")
             fig = px.scatter(val_priced, x="price_best", y="mixed_usage",
                              color="color_architecture", color_discrete_map=TECH_COLORS,
+                             category_orders={"color_architecture": TECH_ORDER},
                              hover_name="fullname",
                              hover_data=["price_per_mixed_use", "price_size", "brand"],
                              labels={"price_best": "Price ($)", "mixed_usage": "Mixed Usage Score"})
@@ -1031,7 +1046,8 @@ elif page == "Price Analyzer":
     wled_val = float(wled_baseline.iloc[0]) if len(wled_baseline) > 0 else None
 
     fig = px.bar(m2_data, x="Technology", y="Median $/m\u00b2", color="Technology",
-                 color_discrete_map=TECH_COLORS, text="Median $/m\u00b2")
+                 color_discrete_map=TECH_COLORS, text="Median $/m\u00b2",
+                 category_orders={"Technology": TECH_ORDER})
     fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside",
                       textfont_size=14, textfont_weight=600, cliponaxis=False)
     if wled_val:
@@ -1072,6 +1088,7 @@ elif page == "Price Analyzer":
 
         fig = px.scatter(priced, x="price_best", y=score_metric,
                          color="color_architecture", color_discrete_map=TECH_COLORS,
+                         category_orders={"color_architecture": TECH_ORDER},
                          hover_name="fullname",
                          hover_data=["brand", "price_source", "price_size"],
                          labels={"price_best": "Price ($)", score_metric: score_label})
@@ -1103,6 +1120,7 @@ elif page == "Price Analyzer":
             fig = px.bar(priced.sort_values("price_per_m2"),
                          x="fullname", y="price_per_m2",
                          color="color_architecture", color_discrete_map=TECH_COLORS,
+                         category_orders={"color_architecture": TECH_ORDER},
                          hover_data=["price_best", "price_size", "brand"],
                          labels={"price_per_m2": "$/m\u00b2", "fullname": ""})
             fig.update_layout(height=500, showlegend=False, xaxis_tickangle=-45,
@@ -1112,6 +1130,7 @@ elif page == "Price Analyzer":
         with col2:
             fig = px.box(priced, x="color_architecture", y="price_per_m2",
                          color="color_architecture", color_discrete_map=TECH_COLORS,
+                         category_orders={"color_architecture": TECH_ORDER},
                          points="all", hover_name="fullname",
                          labels={"price_per_m2": "$/m\u00b2", "color_architecture": ""})
             fig.update_layout(height=500, showlegend=False,
@@ -1212,7 +1231,8 @@ elif page == "Price Analyzer":
                     color="Technology", color_discrete_map=TECH_COLORS,
                     markers=True,
                     labels={"Avg Price": "Average Price ($)", "Week": ""},
-                    category_orders={"Week": weekly["Week"].unique().tolist()},
+                    category_orders={"Week": weekly["Week"].unique().tolist(),
+                                     "Technology": TECH_ORDER},
                 )
                 fig.update_traces(marker=dict(size=10))
                 fig.update_layout(height=500, legend_title_text="Technology",
@@ -1250,7 +1270,8 @@ elif page == "Price Analyzer":
                             color="Technology", color_discrete_map=TECH_COLORS,
                             markers=True,
                             labels={"Avg Price": f'Average Price ($) \u2014 {size_filter}', "Week": ""},
-                            category_orders={"Week": weekly2["Week"].unique().tolist()},
+                            category_orders={"Week": weekly2["Week"].unique().tolist(),
+                                             "Technology": TECH_ORDER},
                         )
                         fig2.update_traces(marker=dict(size=10))
                         fig2.update_layout(height=450, legend_title_text="Technology",
@@ -1281,6 +1302,7 @@ elif page == "Price Analyzer":
 
             fig = px.bar(chan_tech, x="color_architecture", y="pct", color="channel",
                          color_discrete_map=CHANNEL_COLORS,
+                         category_orders={"color_architecture": TECH_ORDER},
                          text="pct", barmode="stack",
                          labels={"color_architecture": "Technology", "pct": "% of Best Prices",
                                  "channel": "Channel"})

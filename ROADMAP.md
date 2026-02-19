@@ -137,19 +137,10 @@ SPD analysis shows CdSe-like FWHM (green 23.7nm, red 17.6nm) despite Panasonic's
 
 ---
 
-### 6. WLED red FWHM still displaying narrow on dashboard
-**Priority: Medium | Effort: Medium**
-
-Samsung U8000F and other WLEDs still show red FWHM under 25nm on the dashboard despite the HWHM mirroring fix. The correction works at the `spd_analyzer.py` level (76-86nm) but the narrow values persist in the displayed data. Needs investigation into whether:
-- The corrected values aren't propagating through `build_schema.py` to `tv_database.csv`
-- The dashboard is reading a stale CSV
-- The HWHM mirroring threshold needs further tuning for certain WLED spectra
-
-**Action:** Trace the data flow from `spd_analysis_results.csv` → `tv_database.csv` → dashboard display. Verify the corrected FWHM values are present at each stage.
-
----
-
 ## Completed
+
+### WLED red FWHM propagation verified (2026-02-19)
+Investigated ROADMAP item #6 — WLED red FWHM values are now correct at every stage: `spd_analysis_results.csv` → `tv_database.csv` → `tv_database_with_prices.csv` → dashboard. Samsung U8000F shows 77.4nm (correct). Issue was stale data prior to pipeline re-run.
 
 ### FWHM overlap correction (2026-02-19)
 Added HWHM mirroring for overlapping peaks in `spd_analyzer.py`. WLED red FWHM corrected from 24-34nm (artificially narrow due to prominence-based measurement) to 76-86nm (physically correct). QD-LCD measurements unchanged.
