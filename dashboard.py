@@ -303,13 +303,20 @@ for dt in all_display_types:
 
 # --- Brand checkboxes ---
 all_brands = sorted(df["brand"].dropna().unique())
-with st.sidebar.expander("**Brands**", expanded=False):
-    brand_all = st.checkbox("All brands", value=True, key="brand_all")
-    selected_brands = []
+st.sidebar.markdown("**Brands**")
+brand_all = st.sidebar.checkbox("All brands", value=True, key="brand_all")
+show_brands = st.sidebar.checkbox("Show brand list", value=False, key="show_brand_list")
+selected_brands = []
+if show_brands:
     for brand in all_brands:
-        checked = st.checkbox(brand, value=brand_all, key=f"brand_{brand}")
+        checked = st.sidebar.checkbox(brand, value=brand_all, key=f"brand_{brand}")
         if checked:
             selected_brands.append(brand)
+else:
+    if brand_all:
+        selected_brands = list(all_brands)
+    else:
+        selected_brands = []
 
 st.sidebar.divider()
 
