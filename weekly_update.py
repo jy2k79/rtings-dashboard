@@ -51,7 +51,7 @@ def run_script(name, abort_on_fail=True):
             [sys.executable, str(path)],
             cwd=str(ROOT),
             capture_output=False,
-            timeout=600,  # 10 minute timeout per script
+            timeout=1200,  # 20 minute timeout per script
         )
         if result.returncode != 0:
             log(f"{name} exited with code {result.returncode}", "ERROR")
