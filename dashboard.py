@@ -51,13 +51,16 @@ button[data-baseweb="tab"] { font-weight: 600 !important; font-size: 1rem !impor
     display: none !important;
 }
 /* Tighter sidebar spacing */
-.stSidebar [data-testid="stCheckbox"] { margin-bottom: -12px; }
-.stSidebar .filter-row { display: flex; align-items: center; gap: 6px; margin: 2px 0 -8px 0; }
-.stSidebar .filter-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-/* Mobile: collapse sidebar, tighter charts */
-@media (max-width: 768px) {
+.stSidebar [data-testid="stCheckbox"] { margin-bottom: -10px; }
+/* Mobile: iPhone Pro Max (~430px) */
+@media (max-width: 480px) {
     [data-testid="stSidebar"] { min-width: 0 !important; }
-    .stPlotlyChart { margin-left: -1rem; margin-right: -1rem; }
+    .stPlotlyChart { margin-left: -0.5rem; margin-right: -0.5rem; }
+    h1 { font-size: 1.5rem !important; }
+    h2 { font-size: 1.2rem !important; }
+    [data-testid="stMetricValue"] { font-size: 1.1rem !important; }
+    [data-testid="stTabs"] button { font-size: 0.85rem !important; padding: 6px 8px !important; }
+    .stSidebar [data-testid="stCheckbox"] { margin-bottom: -14px; }
 }
 </style>
 """, unsafe_allow_html=True)
@@ -104,15 +107,37 @@ components.html("""
         }
     }
 
+    // Inject colored dots into sidebar checkbox labels
+    var colorMap = {
+        'QD-OLED': '#FF009F', 'WOLED': '#4B40EB', 'QD-LCD': '#FFC700',
+        'Pseudo QD': '#FF7E43', 'KSF': '#90BFFF', 'WLED': '#A8BDD0',
+        'OLED': '#4B40EB', 'LCD': '#FFC700'
+    };
+
+    function addDots() {
+        var sidebar = doc.querySelector('[data-testid="stSidebar"]');
+        if (!sidebar) return;
+        var labels = sidebar.querySelectorAll('[data-testid="stCheckbox"] label p, [data-testid="stCheckbox"] label span');
+        labels.forEach(function(el) {
+            var text = el.textContent.trim();
+            if (colorMap[text] && !el.getAttribute('data-dotted')) {
+                el.setAttribute('data-dotted', '1');
+                var dot = doc.createElement('span');
+                dot.style.cssText = 'display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle;background:' + colorMap[text];
+                el.insertBefore(dot, el.firstChild);
+            }
+        });
+    }
+
     // Run repeatedly to catch Streamlit re-renders
-    fix();
-    setTimeout(fix, 300);
-    setTimeout(fix, 1000);
-    setTimeout(fix, 2000);
-    setTimeout(fix, 4000);
+    fix(); addDots();
+    setTimeout(function() { fix(); addDots(); }, 300);
+    setTimeout(function() { fix(); addDots(); }, 1000);
+    setTimeout(function() { fix(); addDots(); }, 2000);
+    setTimeout(function() { fix(); addDots(); }, 4000);
 
     // Also watch for DOM changes
-    var obs = new MutationObserver(function() { fix(); });
+    var obs = new MutationObserver(function() { fix(); addDots(); });
     obs.observe(doc.body, { childList: true, subtree: true, characterData: true });
 })();
 </script>
@@ -282,12 +307,7 @@ st.sidebar.markdown("**Color Architecture**")
 tech_all = st.sidebar.checkbox("All technologies", value=True, key="tech_all")
 selected_techs = []
 for tech in all_techs:
-    color = TECH_COLORS.get(tech, "#888")
-    st.sidebar.markdown(
-        f'<div class="filter-row"><div class="filter-dot" style="background:{color}"></div></div>',
-        unsafe_allow_html=True)
-    checked = st.sidebar.checkbox(tech, value=tech_all, key=f"tech_{tech}")
-    if checked:
+    if st.sidebar.checkbox(tech, value=tech_all, key=f"tech_{tech}"):
         selected_techs.append(tech)
 
 # --- Display Type checkboxes ---
@@ -296,12 +316,7 @@ all_display_types = sorted(df["display_type"].dropna().unique())
 dt_all = st.sidebar.checkbox("All display types", value=True, key="dt_all")
 selected_display_types = []
 for dt in all_display_types:
-    color = DISPLAY_TYPE_COLORS.get(dt, "#888")
-    st.sidebar.markdown(
-        f'<div class="filter-row"><div class="filter-dot" style="background:{color}"></div></div>',
-        unsafe_allow_html=True)
-    checked = st.sidebar.checkbox(dt, value=dt_all, key=f"dt_{dt}")
-    if checked:
+    if st.sidebar.checkbox(dt, value=dt_all, key=f"dt_{dt}"):
         selected_display_types.append(dt)
 
 # --- Brand checkboxes ---
