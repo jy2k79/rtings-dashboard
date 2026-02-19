@@ -361,10 +361,11 @@ else:
 fdf = df[mask].copy()
 st.sidebar.markdown(f"**Showing {len(fdf)}/{len(df)} TVs**")
 
-page = st.sidebar.radio(
-    "View",
-    ["Overview", "Technology Explorer", "Price Analyzer", "Comparison Tool", "TV Profiles"],
-)
+# Support deep-linking via ?page=...
+ALL_PAGES = ["Overview", "Technology Explorer", "Price Analyzer", "Comparison Tool", "TV Profiles"]
+qp_page = st.query_params.get("page", None)
+default_idx = ALL_PAGES.index(qp_page) if qp_page in ALL_PAGES else 0
+page = st.sidebar.radio("View", ALL_PAGES, index=default_idx)
 
 
 # ============================================================================
