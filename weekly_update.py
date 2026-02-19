@@ -18,6 +18,9 @@ import sys
 import subprocess
 import traceback
 import platform
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime
 from pathlib import Path
 
@@ -214,6 +217,84 @@ def update_registry(new_db):
 # Notifications
 # ---------------------------------------------------------------------------
 
+def send_email(subject, body_html):
+    """Send an email report via Gmail SMTP. Requires secrets in env."""
+    sender = os.environ.get("GMAIL_ADDRESS")
+    app_pw = os.environ.get("GMAIL_APP_PASSWORD")
+    recipient = os.environ.get("NOTIFY_EMAIL")
+
+    if not all([sender, app_pw, recipient]):
+        log("Email secrets not configured — skipping email notification", "WARN")
+        return False
+
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = subject
+    msg["From"] = f"TV Dashboard <{sender}>"
+    msg["To"] = recipient
+    msg.attach(MIMEText(body_html, "html"))
+
+    try:
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.starttls()
+            server.login(sender, app_pw)
+            server.sendmail(sender, recipient, msg.as_string())
+        log(f"Email sent to {recipient}")
+        return True
+    except Exception as e:
+        log(f"Email failed: {e}", "ERROR")
+        return False
+
+
+def build_email_report(summary, changes, errors, old_count, new_count, n_priced):
+    """Build an HTML email report."""
+    status = "with warnings" if errors else "successfully"
+    html = f"""
+    <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;color:#e0e0e0;background:#1a1a2e;padding:24px;border-radius:8px">
+      <h2 style="color:#fff;margin-top:0">TV Dashboard — Weekly Update</h2>
+      <p style="color:#90bfff;font-size:14px">{TODAY} &middot; Completed {status}</p>
+      <hr style="border:1px solid #333">
+
+      <table style="width:100%;font-size:15px;border-collapse:collapse">
+        <tr><td style="padding:6px 0;color:#999">Total TVs</td><td style="padding:6px 0;text-align:right;color:#fff"><b>{new_count}</b></td></tr>
+        <tr><td style="padding:6px 0;color:#999">Previous count</td><td style="padding:6px 0;text-align:right;color:#fff">{old_count}</td></tr>
+        <tr><td style="padding:6px 0;color:#999">TVs with pricing</td><td style="padding:6px 0;text-align:right;color:#fff">{n_priced}</td></tr>
+        <tr><td style="padding:6px 0;color:#999">Total changes</td><td style="padding:6px 0;text-align:right;color:#fff">{len(changes)}</td></tr>
+      </table>"""
+
+    new_tvs = [c for c in changes if c["change_type"] == "new_tv"]
+    removed_tvs = [c for c in changes if c["change_type"] == "removed_tv"]
+    score_changes = [c for c in changes if c["change_type"] == "score_change"]
+
+    if new_tvs:
+        html += '<h3 style="color:#4ade80;margin-bottom:8px">New TVs</h3><ul style="margin:0;padding-left:20px">'
+        for c in new_tvs:
+            html += f'<li style="padding:2px 0">{c["fullname"]} ({c["new_value"]})</li>'
+        html += '</ul>'
+
+    if removed_tvs:
+        html += '<h3 style="color:#f87171;margin-bottom:8px">Removed TVs</h3><ul style="margin:0;padding-left:20px">'
+        for c in removed_tvs:
+            html += f'<li style="padding:2px 0">{c["fullname"]}</li>'
+        html += '</ul>'
+
+    if score_changes:
+        html += f'<h3 style="color:#fbbf24;margin-bottom:8px">Score Changes ({len(score_changes)})</h3><ul style="margin:0;padding-left:20px">'
+        for c in score_changes[:15]:
+            html += f'<li style="padding:2px 0">{c["fullname"]}: {c["field"]} {c["old_value"]} → {c["new_value"]}</li>'
+        if len(score_changes) > 15:
+            html += f'<li style="color:#999">...and {len(score_changes) - 15} more</li>'
+        html += '</ul>'
+
+    if errors:
+        html += '<h3 style="color:#f87171;margin-bottom:8px">Warnings</h3><ul style="margin:0;padding-left:20px">'
+        for e in errors:
+            html += f'<li style="padding:2px 0">{e}</li>'
+        html += '</ul>'
+
+    html += '<hr style="border:1px solid #333"><p style="color:#666;font-size:12px;margin-bottom:0">Automated report from TV Display Technology Dashboard</p></div>'
+    return html
+
+
 def notify(title, message):
     """Send a notification — macOS native or GitHub Actions summary."""
     log(f"NOTIFICATION: {title} — {message}")
@@ -327,6 +408,12 @@ def main():
 
     summary = ", ".join(summary_parts)
     notify("TV Dashboard Updated", summary)
+
+    # --- Step 8: Email report ---
+    email_html = build_email_report(
+        summary, changes if 'changes' in dir() else [],
+        errors, old_count, new_count, n_priced)
+    send_email(f"TV Dashboard Update — {TODAY}", email_html)
 
     print(f"\n{'=' * 70}")
     print(f"UPDATE COMPLETE: {summary}")
