@@ -280,6 +280,9 @@ def axis_range(col, data_df=None):
     pct_cols = {"sdr_dci_p3_coverage_pct", "hdr_bt2020_coverage_itp_pct", "sdr_bt2020_coverage_pct"}
     if col in pct_cols:
         return [0, 105]
+    fwhm_cols = {"green_fwhm_nm", "red_fwhm_nm", "blue_fwhm_nm"}
+    if col in fwhm_cols:
+        return [0, 75]
     # Use filtered data (fdf) by default so the chart scales to the current view
     src = data_df if data_df is not None else fdf
     if col not in src.columns:
@@ -544,14 +547,27 @@ elif page == "Technology Explorer":
             format_func=friendly,
         )
 
-        valid = fdf[fdf[metric].notna()]
+        valid = fdf[fdf[metric].notna()].copy()
+        # OLEDs have infinite native contrast (perfect blacks) — replace inf
+        # with a capped value so they appear on the chart
+        has_inf = False
+        if metric == "native_contrast" and np.isinf(valid[metric]).any():
+            has_inf = True
+            finite_max = valid.loc[np.isfinite(valid[metric]), metric].max()
+            cap = max(finite_max * 1.5, 20000) if pd.notna(finite_max) else 20000
+            valid[metric] = valid[metric].replace([np.inf], cap)
         fig = px.box(valid, x="color_architecture", y=metric,
                      color="color_architecture", color_discrete_map=TECH_COLORS,
                      points="all", hover_name="fullname",
                      labels={metric: friendly(metric), "color_architecture": ""})
         fig.update_layout(showlegend=False, height=500,
-                          yaxis=dict(range=axis_range(metric)), **PL)
+                          yaxis=dict(range=axis_range(metric, data_df=valid)), **PL)
         fig.update_traces(marker=dict(size=8))
+        if has_inf:
+            fig.add_annotation(
+                text="OLED = effectively infinite contrast (perfect blacks)",
+                xref="paper", yref="paper", x=0.5, y=1.02,
+                showarrow=False, font=dict(size=12, color="#999"))
         st.plotly_chart(fig, use_container_width=True)
 
         st.markdown("**Average Scores by Technology**")
