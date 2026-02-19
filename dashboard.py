@@ -1011,6 +1011,13 @@ elif page == "Price Analyzer":
         st.warning("No priced TVs match the current filters.")
         st.stop()
 
+    # Merge Amazon channels: amazon + amazon_3p → Amazon
+    if "price_source" in priced.columns:
+        priced["channel"] = priced["price_source"].replace({
+            "amazon": "Amazon", "amazon_3p": "Amazon",
+            "bestbuy": "Best Buy", "rtings": "RTINGS (affiliate)",
+        })
+
     # --- Headline: Technology Cost per m² with WLED premium ---
     st.subheader("Technology Cost per m\u00b2")
     st.caption("Median price per square meter by display technology, with premium over WLED baseline. "
@@ -1050,7 +1057,7 @@ elif page == "Price Analyzer":
 
     st.divider()
 
-    tab1, tab2, tab3, tab4 = st.tabs(["Value Map", "Price/m\u00b2", "Best Deals", "Price Trends"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["Value Map", "Price/m\u00b2", "Best Deals", "Price Trends", "Channels"])
 
     with tab1:
         score_metric = st.selectbox(
@@ -1249,6 +1256,76 @@ elif page == "Price Analyzer":
                         fig2.update_layout(height=450, legend_title_text="Technology",
                                           xaxis=dict(type="category"), **PL)
                         st.plotly_chart(fig2, use_container_width=True)
+
+    with tab5:
+        st.subheader("Channel Analysis")
+        st.caption("Where to find the best prices by display technology. "
+                   "Amazon combines 1P (sold by Amazon) and 3P (third-party sellers). "
+                   "RTINGS affiliate prices are used as fallback when no live API data is available.")
+
+        if "channel" not in priced.columns:
+            st.info("No channel data available.")
+        else:
+            # --- Channel wins by technology ---
+            chan_tech = (priced.groupby(["color_architecture", "channel"], observed=True)
+                        .size().reset_index(name="count"))
+            # Compute % within each technology
+            tech_totals = chan_tech.groupby("color_architecture", observed=True)["count"].transform("sum")
+            chan_tech["pct"] = (chan_tech["count"] / tech_totals * 100).round(0)
+
+            CHANNEL_COLORS = {
+                "Amazon": "#FF9900",
+                "Best Buy": "#0046BE",
+                "RTINGS (affiliate)": "#666666",
+            }
+
+            fig = px.bar(chan_tech, x="color_architecture", y="pct", color="channel",
+                         color_discrete_map=CHANNEL_COLORS,
+                         text="pct", barmode="stack",
+                         labels={"color_architecture": "Technology", "pct": "% of Best Prices",
+                                 "channel": "Channel"})
+            fig.update_traces(texttemplate="%{text:.0f}%", textposition="inside",
+                              textfont_size=12)
+            fig.update_layout(height=400, legend_title_text="Channel",
+                              yaxis=dict(range=[0, 105], title="% of Best Prices"), **PL)
+            st.plotly_chart(fig, use_container_width=True)
+
+            # --- QD channel breakdown ---
+            st.markdown("**Best Channel for QD-Based TVs**")
+            qd_techs = ["QD-LCD", "QD-OLED", "Pseudo QD"]
+            qd_priced = priced[priced["color_architecture"].isin(qd_techs)]
+            if len(qd_priced) > 0:
+                qd_channels = (qd_priced.groupby("channel")
+                               .agg(wins=("channel", "size"),
+                                    avg_price=("price_best", "mean"),
+                                    median_price=("price_best", "median"))
+                               .sort_values("wins", ascending=False)
+                               .reset_index())
+                qd_channels["avg_price"] = qd_channels["avg_price"].apply(lambda x: f"${x:,.0f}")
+                qd_channels["median_price"] = qd_channels["median_price"].apply(lambda x: f"${x:,.0f}")
+                qd_channels.columns = ["Channel", "Best Price Wins", "Avg Price", "Median Price"]
+                st.dataframe(qd_channels, use_container_width=True, hide_index=True)
+
+            # --- Size-level channel analysis from tv_prices.csv ---
+            if len(prices_df) > 0:
+                st.markdown("**Channel Coverage by Size**")
+                st.caption("Number of size/model combinations with pricing from each channel, "
+                           "across the full tv_prices dataset.")
+                sized = prices_df[prices_df["best_price"].notna()].copy()
+                if "price_source" in sized.columns:
+                    sized["channel"] = sized["price_source"].replace({
+                        "amazon": "Amazon", "amazon_3p": "Amazon",
+                        "bestbuy": "Best Buy", "rtings": "RTINGS (affiliate)",
+                    })
+                    size_chan = (sized.groupby(["size_inches", "channel"])
+                                .size().reset_index(name="count"))
+                    fig = px.bar(size_chan, x="size_inches", y="count", color="channel",
+                                 color_discrete_map=CHANNEL_COLORS,
+                                 barmode="group",
+                                 labels={"size_inches": "Screen Size (inches)",
+                                         "count": "Price Points", "channel": "Channel"})
+                    fig.update_layout(height=400, legend_title_text="Channel", **PL)
+                    st.plotly_chart(fig, use_container_width=True)
 
 
 # ============================================================================
