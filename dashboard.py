@@ -331,7 +331,8 @@ def axis_range(col, data_df=None):
 _logo_path = Path(__file__).parent / "logos" / "Nanosys Logo White Text 4X.png"
 if _logo_path.exists():
     st.sidebar.image(str(_logo_path), use_container_width=True)
-    st.sidebar.caption("Display Technology Intelligence")
+    st.sidebar.markdown("<p style='text-align:center;color:#999;font-size:0.85em;margin-top:-8px'>Display Technology Intelligence</p>",
+                        unsafe_allow_html=True)
     st.sidebar.divider()
 st.sidebar.title("Filters")
 
