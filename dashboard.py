@@ -1464,7 +1464,7 @@ elif page == "Temporal Analysis":
         "Model Year filter so all years are always visible for comparison."
     )
 
-    MIN_SAMPLES = 2  # minimum TVs per (tech, year) group to show aggregated data
+    MIN_SAMPLES = 1  # minimum TVs per (tech, year) group to show aggregated data
 
     # Valid years present in the temporal dataframe
     _year_counts = tdf["model_year"].dropna().value_counts().sort_index()
@@ -1709,13 +1709,10 @@ elif page == "Temporal Analysis":
                     # Previous year dot
                     fig4.add_trace(go.Scatter(
                         x=[p_score], y=[tech],
-                        mode="markers+text",
+                        mode="markers",
                         marker=dict(color=color, size=14, symbol="circle",
                                     line=dict(color="white", width=1)),
-                        text=[f"{p_score:.1f}"],
-                        textposition="middle left" if c_score >= p_score else "middle right",
-                        textfont=dict(size=11),
-                        name=str(_prev_yr) if i == 0 else None,
+                        name=f"{_prev_yr}" if i == 0 else None,
                         legendgroup=str(_prev_yr),
                         showlegend=(i == 0),
                         hovertemplate=f"{tech} ({_prev_yr}): %{{x:.1f}}<extra></extra>",
@@ -1723,13 +1720,10 @@ elif page == "Temporal Analysis":
                     # Current year dot
                     fig4.add_trace(go.Scatter(
                         x=[c_score], y=[tech],
-                        mode="markers+text",
+                        mode="markers",
                         marker=dict(color=color, size=14, symbol="diamond",
                                     line=dict(color="white", width=1)),
-                        text=[f"{c_score:.1f}"],
-                        textposition="middle right" if c_score >= p_score else "middle left",
-                        textfont=dict(size=11),
-                        name=str(_latest_yr) if i == 0 else None,
+                        name=f"{_latest_yr}" if i == 0 else None,
                         legendgroup=str(_latest_yr),
                         showlegend=(i == 0),
                         hovertemplate=f"{tech} ({_latest_yr}): %{{x:.1f}}<extra></extra>",
@@ -1760,12 +1754,18 @@ elif page == "Temporal Analysis":
                     yaxis=dict(
                         categoryorder="array",
                         categoryarray=list(reversed(_common_techs)),
+                        tickfont=dict(size=13),
                     ),
                     annotations=_annotations,
-                    height=max(300, len(_common_techs) * 70 + 80),
-                    margin=dict(r=120),
+                    height=max(350, len(_common_techs) * 80 + 100),
+                    margin=dict(l=110, r=130),
                     legend=dict(
                         title=f"  \u25CF {_prev_yr}  \u25C6 {_latest_yr}",
+                        orientation="h",
+                        yanchor="bottom",
+                        y=1.02,
+                        xanchor="left",
+                        x=0,
                     ),
                     **PL,
                 )
