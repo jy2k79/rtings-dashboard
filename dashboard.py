@@ -334,6 +334,23 @@ if _logo_path.exists():
     st.sidebar.markdown("<p style='text-align:center;color:#999;font-size:0.85em;margin-top:-8px'>Display Technology Intelligence</p>",
                         unsafe_allow_html=True)
     st.sidebar.divider()
+
+# --- Monthly report download ---
+_reports_dir = Path(__file__).parent / "data" / "reports"
+_report_files = sorted(_reports_dir.glob("display_intelligence_*.pdf"), reverse=True) if _reports_dir.exists() else []
+if _report_files:
+    _latest_report = _report_files[0]
+    _report_label = _latest_report.stem.replace("display_intelligence_", "").replace("_", " ")
+    with open(_latest_report, "rb") as _f:
+        st.sidebar.download_button(
+            f"Monthly Report ({_report_label})",
+            _f.read(),
+            file_name=_latest_report.name,
+            mime="application/pdf",
+            use_container_width=True,
+        )
+    st.sidebar.divider()
+
 st.sidebar.title("Filters")
 
 # --- Technology checkboxes with color dots ---
