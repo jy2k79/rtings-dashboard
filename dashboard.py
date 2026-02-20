@@ -402,11 +402,14 @@ price_range = st.sidebar.slider(
 )
 include_unpriced = st.sidebar.checkbox("Include TVs without pricing", value=True)
 
-# --- Model Year ---
+# --- Model Year checkboxes ---
 available_years = sorted(df["model_year"].dropna().unique().astype(int).tolist())
-selected_years = st.sidebar.multiselect(
-    "Model Year", available_years, default=available_years
-)
+st.sidebar.markdown("**Model Year**")
+year_all = st.sidebar.checkbox("All years", value=True, key="year_all")
+selected_years = []
+for yr in available_years:
+    if st.sidebar.checkbox(str(yr), value=year_all, key=f"year_{yr}"):
+        selected_years.append(yr)
 
 # --- Build filter mask ---
 mask = (
