@@ -1667,7 +1667,7 @@ elif page == "Temporal Analysis":
 
         st.divider()
 
-        # Chart 4 — Year-over-Year Change Summary (dumbbell/arrow)
+        # Chart 4 — Year-over-Year Change Summary (metric cards)
         st.subheader("Year-over-Year Change Summary")
         if _n_valid_years < 2:
             st.info(
@@ -1678,7 +1678,6 @@ elif page == "Temporal Analysis":
         else:
             _latest_yr = _valid_years[-1]
             _prev_yr = _valid_years[-2]
-            # Build per-tech comparison for the two most recent years
             _prev = _ty[_ty["model_year"] == _prev_yr].set_index("color_architecture")
             _curr = _ty[_ty["model_year"] == _latest_yr].set_index("color_architecture")
             _common_techs = [t for t in TECH_ORDER if t in _prev.index and t in _curr.index]
@@ -1689,93 +1688,60 @@ elif page == "Temporal Analysis":
                     f"{_latest_yr} to compare (need n >= {MIN_SAMPLES} each year)."
                 )
             else:
-                fig4 = go.Figure()
-                for i, tech in enumerate(_common_techs):
+                st.caption(f"Comparing {_prev_yr} vs {_latest_yr} model years")
+                for tech in _common_techs:
                     color = TECH_COLORS.get(tech, "#888")
                     p_score = _prev.loc[tech, "avg_mixed"]
                     c_score = _curr.loc[tech, "avg_mixed"]
-                    improved = c_score >= p_score
-                    line_color = "#4ade80" if improved else "#f87171"
+                    score_delta = c_score - p_score
+                    p_n = int(_prev.loc[tech, "n"])
+                    c_n = int(_curr.loc[tech, "n"])
 
-                    # Connecting line
-                    fig4.add_trace(go.Scatter(
-                        x=[p_score, c_score],
-                        y=[tech, tech],
-                        mode="lines",
-                        line=dict(color=line_color, width=3),
-                        showlegend=False,
-                        hoverinfo="skip",
-                    ))
-                    # Previous year dot
-                    fig4.add_trace(go.Scatter(
-                        x=[p_score], y=[tech],
-                        mode="markers",
-                        marker=dict(color=color, size=14, symbol="circle",
-                                    line=dict(color="white", width=1)),
-                        name=f"{_prev_yr}" if i == 0 else None,
-                        legendgroup=str(_prev_yr),
-                        showlegend=(i == 0),
-                        hovertemplate=f"{tech} ({_prev_yr}): %{{x:.1f}}<extra></extra>",
-                    ))
-                    # Current year dot
-                    fig4.add_trace(go.Scatter(
-                        x=[c_score], y=[tech],
-                        mode="markers",
-                        marker=dict(color=color, size=14, symbol="diamond",
-                                    line=dict(color="white", width=1)),
-                        name=f"{_latest_yr}" if i == 0 else None,
-                        legendgroup=str(_latest_yr),
-                        showlegend=(i == 0),
-                        hovertemplate=f"{tech} ({_latest_yr}): %{{x:.1f}}<extra></extra>",
-                    ))
-
-                # Add $/m² change annotations on the right
-                _annotations = []
-                for tech in _common_techs:
                     p_m2 = _prev.loc[tech, "avg_price_m2"]
                     c_m2 = _curr.loc[tech, "avg_price_m2"]
-                    if pd.notna(p_m2) and pd.notna(c_m2) and p_m2 > 0:
-                        pct = (c_m2 - p_m2) / p_m2 * 100
-                        sign = "+" if pct >= 0 else ""
-                        _annotations.append(dict(
-                            x=1.02, y=tech,
-                            xref="paper", yref="y",
-                            text=f"$/m\u00b2: {sign}{pct:.0f}%",
-                            showarrow=False,
-                            font=dict(
-                                size=12,
-                                color="#4ade80" if pct <= 0 else "#f87171",
-                            ),
-                            xanchor="left",
-                        ))
 
-                fig4.update_layout(
-                    xaxis=dict(title="Avg Mixed Usage Score", range=[0, 10.5]),
-                    yaxis=dict(
-                        categoryorder="array",
-                        categoryarray=list(reversed(_common_techs)),
-                        tickfont=dict(size=13),
-                    ),
-                    annotations=_annotations,
-                    height=max(350, len(_common_techs) * 80 + 100),
-                    margin=dict(l=110, r=130),
-                    legend=dict(
-                        title=f"  \u25CF {_prev_yr}  \u25C6 {_latest_yr}",
-                        orientation="h",
-                        yanchor="bottom",
-                        y=1.02,
-                        xanchor="left",
-                        x=0,
-                    ),
-                    **PL,
-                )
-                st.plotly_chart(fig4, use_container_width=True)
-
-                st.caption(
-                    f"Comparing {_prev_yr} vs {_latest_yr} model years. "
-                    f"Green lines = score improvement, red = decline. "
-                    f"Right column shows $/m\u00b2 change (green = cheaper)."
-                )
+                    st.markdown(
+                        f"<span style='color:{color}; font-weight:700; font-size:1.1rem'>"
+                        f"{tech}</span> &nbsp; "
+                        f"<span style='color:#999; font-size:0.85rem'>"
+                        f"n={p_n} \u2192 {c_n}</span>",
+                        unsafe_allow_html=True,
+                    )
+                    cols = st.columns(3)
+                    with cols[0]:
+                        st.metric(
+                            "Mixed Usage",
+                            f"{c_score:.1f}",
+                            delta=f"{score_delta:+.1f}",
+                        )
+                    with cols[1]:
+                        if pd.notna(c_m2):
+                            m2_delta = None
+                            if pd.notna(p_m2) and p_m2 > 0:
+                                pct = (c_m2 - p_m2) / p_m2 * 100
+                                m2_delta = f"{pct:+.0f}%"
+                            st.metric(
+                                "Avg $/m\u00b2",
+                                f"${c_m2:,.0f}",
+                                delta=m2_delta,
+                                delta_color="inverse",
+                            )
+                        else:
+                            st.metric("Avg $/m\u00b2", "N/A")
+                    with cols[2]:
+                        if pd.notna(c_m2) and c_score > 0:
+                            val = c_m2 / c_score
+                            prev_val = (p_m2 / p_score) if pd.notna(p_m2) and p_score > 0 else None
+                            val_delta = None
+                            if prev_val:
+                                val_pct = (val - prev_val) / prev_val * 100
+                                val_delta = f"{val_pct:+.0f}%"
+                            st.metric(
+                                "$/m\u00b2 per Point",
+                                f"${val:,.0f}",
+                                delta=val_delta,
+                                delta_color="inverse",
+                            )
 
 
 # ============================================================================
