@@ -172,6 +172,10 @@ def build_schema():
                 'red_peak_nm', 'red_fwhm_nm', 'num_peaks']
     merged = tv_df.merge(spd_df[spd_cols], on='product_id', how='left')
 
+    # Normalize panel_sub_type: collapse variants like "VA (except 75")" → "VA"
+    if 'panel_sub_type' in merged.columns:
+        merged['panel_sub_type'] = merged['panel_sub_type'].str.extract(r'^([\w-]+)', expand=False)
+
     # =========================================================================
     # Column 1: display_type
     # =========================================================================
