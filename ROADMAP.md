@@ -15,32 +15,6 @@ Basic `actions/cache` for `spd_images/` is implemented. Scraper skips existing f
 
 ---
 
-### 2. Extract panel_sub_type from RTINGS scraper
-**Priority: High | Effort: Medium**
-
-The scraper doesn't extract `panel_sub_type` (QD-OLED vs WOLED). All OLEDs fall back to SPD-based classification (medium confidence) instead of metadata-based (high confidence).
-
-**Plan:**
-- Investigate RTINGS API for panel sub-type field (different test ID or product metadata)
-- Add extraction to `build_product_records()` in `rtings_scraper.py`
-- Fallback: derive from product name heuristics (Samsung S90/S95 = QD-OLED, LG C/G/B = WOLED)
-
-**Impact:** High-confidence OLED classification on CI.
-
----
-
-### 3. WOLED FWHM deconvolution / color gamut cross-validation
-**Priority: Medium | Effort: High**
-
-WOLED uses RGBW subpixels. The W subpixel passes full unfiltered spectrum, broadening measured green/red FWHM beyond true emitter widths. Current values are "composite."
-
-**Ideas:**
-- **Color gamut cross-validation:** Back-calculate implied FWHM from RTINGS DCI-P3/Rec.2020 coverage data
-- **YAG phosphor modeling:** Model unfiltered W component and subtract
-- **Minimum:** Flag WOLED FWHM as "composite" in dashboard charts
-
-**Context:** WOLED color filters are much more aggressive than WLED. No simple solution -- known display metrology challenge.
-
 ---
 
 ### 4. Monthly Display Technology Intelligence Report
@@ -128,15 +102,6 @@ Automated monthly analyst report delivered via email on the first Monday of each
 
 ---
 
-### 5. Panasonic W95A classification
-**Priority: Low | Effort: Low**
-
-SPD analysis shows CdSe-like FWHM (green 23.7nm, red 17.6nm) despite Panasonic's no-Cadmium policy. Ground truth says "Cd-Free" but spectral signature is clearly CdSe. Could be a legacy "Hyperion" hybrid material (green InP + red CdSe) but both peaks are narrow, suggesting pure CdSe.
-
-**Action:** Flag as anomaly in dashboard; revisit if Panasonic confirms material choice.
-
----
-
 ### 6. Model year sort order (reverse chronological)
 **Priority: Low | Effort: Low**
 
@@ -165,6 +130,18 @@ Sony KSF models show suspiciously narrow green FWHM. QD-LCD reds are spread over
 ---
 
 ## Completed
+
+### panel_sub_type extracted from RTINGS API (2026-03-06)
+Closed roadmap item #2. Added test ID 216 (`panel_sub_type`) to scraper. API returns clean values: `QD-OLED`, `WOLED`, `VA`, `IPS`, `VA (except 75")` for all 85 TVs. `build_schema.py` now uses `panel_sub_type` as high-confidence override for OLED `color_architecture` (19 OLEDs classified). SPD analysis confirmed 100% agreement — no mismatches.
+
+### WOLED FWHM measurement confirmed correct (2026-03-06)
+Closed roadmap item #3. FWHM from zero baseline is correct for WOLED. Tandem WOLED (LG G5, Panasonic Z95B) has discrete R/G emitters producing genuinely narrower peaks (green 33-54nm) vs traditional WOLED (B4/C4/C5: green 70-110nm). This is a real structural advantage, not a measurement artifact. Expect G6/C6 to follow G5 pattern.
+
+### Panasonic W95A confirmed CdSe (2026-03-06)
+Closed roadmap item #5. SPD shows unambiguous CdSe signature (green 23.9nm, red 17.7nm). Classified as QD-LCD CdSe. Panasonic's "Cd-Free" claim contradicted by spectral data.
+
+### FWHM zero-baseline fix + CdSe/InP subclassification (2026-03-06)
+Closed roadmap items #6, #7, #8. Switched FWHM from scipy prominence-based to absolute zero baseline. Added CdSe vs InP QD material tracking via red FWHM threshold (30nm). Fixed model year sort, PDF download on Streamlit Cloud, pricing charts switched to median.
 
 ### WLED red FWHM propagation verified (2026-02-19)
 Investigated ROADMAP item #6 — WLED red FWHM values are now correct at every stage: `spd_analysis_results.csv` → `tv_database.csv` → `tv_database_with_prices.csv` → dashboard. Samsung U8000F shows 77.4nm (correct). Issue was stale data prior to pipeline re-run.

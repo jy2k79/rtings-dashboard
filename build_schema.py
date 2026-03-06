@@ -206,6 +206,25 @@ def build_schema():
     merged['color_architecture'] = merged['spd_classification']
 
     # =========================================================================
+    # Column 3b: Override OLED color_architecture from panel_sub_type
+    # RTINGS API test 216 returns QD-OLED or WOLED — higher confidence than SPD
+    # =========================================================================
+    if 'panel_sub_type' in merged.columns:
+        oled_mask = merged['display_type'] == 'OLED'
+        has_sub = oled_mask & merged['panel_sub_type'].isin(['QD-OLED', 'WOLED'])
+        override_count = has_sub.sum()
+        if override_count > 0:
+            # Check for mismatches before overriding
+            mismatches = has_sub & (merged['color_architecture'] != merged['panel_sub_type'])
+            if mismatches.any():
+                print(f"\nOLED classification overrides (panel_sub_type vs SPD):")
+                for _, row in merged[mismatches].iterrows():
+                    print(f"  {row['fullname']:45s} SPD={row['color_architecture']!r:10s} → API={row['panel_sub_type']!r}")
+            merged.loc[has_sub, 'color_architecture'] = merged.loc[has_sub, 'panel_sub_type']
+            merged.loc[has_sub, 'spd_confidence'] = 'high'
+            print(f"\nApplied panel_sub_type override for {override_count} OLEDs")
+
+    # =========================================================================
     # Column 7 (early): marketing_label — needed for KSF/Pseudo QD reclassification
     # =========================================================================
     merged['marketing_label'] = merged.apply(determine_marketing_label, axis=1)

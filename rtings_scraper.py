@@ -56,6 +56,7 @@ SPD_DIR = Path("spd_images")
 TEST_IDS = {
     # Identity / panel info
     "217": "panel_type",            # LCD, OLED, etc.
+    "216": "panel_sub_type",        # QD-OLED, WOLED, IPS, VA, etc.
     "215": "backlight_type",        # Full-Array, Edge-Lit, etc.
     "208": "resolution",            # 4k, 8k
     "219": "native_refresh_rate",   # 60Hz, 120Hz, 144Hz
