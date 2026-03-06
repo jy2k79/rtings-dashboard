@@ -16,8 +16,9 @@ data/*.xlsx
 data/raw/
 data/rtings_tv_data.json
 
-# Generated reports (large PDFs, emailed not committed)
-data/reports/
+# Generated report artifacts (charts, temp files)
+data/reports/charts_test/
+data/reports/.DS_Store
 
 # Logs
 data/launchd_*.log

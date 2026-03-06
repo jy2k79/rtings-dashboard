@@ -11,7 +11,7 @@ on:
         default: false
 
 permissions:
-  contents: read  # Read-only — PDF is emailed, not committed
+  contents: write  # Commit PDF so Streamlit Cloud can serve the download
 
 jobs:
   report:
@@ -41,3 +41,11 @@ jobs:
           else
             python monthly_report.py
           fi
+
+      - name: Commit report PDF
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/reports/*.pdf
+          git diff --cached --quiet || git commit -m "Monthly report $(date +%Y-%m)"
+          git push
