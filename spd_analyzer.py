@@ -271,52 +271,38 @@ def extract_spd_curve(image_path):
 def _measure_fwhm_robust(wavelengths, intensities, peak_idx, all_peaks_idx,
                          samples_per_nm):
     """
-    Overlap-aware FWHM measurement.
+    FWHM measurement from absolute zero baseline.
 
-    For well-separated peaks, uses standard scipy peak_widths (prominence-based).
-    For overlapping peaks (e.g. WLED green/red sharing a broad phosphor hump),
-    measures the half-width on the uncontaminated side and doubles it (HWHM
-    mirroring).  This avoids the artifact where prominence-based measurement
-    gives artificially narrow FWHM when the valley between peaks is high.
+    Measures half-max as peak_height / 2 (from zero), then scans left and right
+    to find where the intensity crosses that level.  Scans are bounded by the
+    valley between this peak and its nearest neighbor to avoid crossing through
+    overlapping peaks (e.g. WLED broad phosphor humps).
+
+    If a side's valley is above half-max (overlap), mirrors the clean side's
+    HWHM instead.
 
     Returns (fwhm_nm, method_str).
     """
     peak_height = intensities[peak_idx]
     half_max_abs = peak_height / 2.0
 
-    # --- Standard prominence-based FWHM (baseline) ---
-    w = peak_widths(intensities, [peak_idx], rel_height=0.5)
-    standard_fwhm = w[0][0] / samples_per_nm
-
-    # --- Detect overlap on each side ---
-    overlap_left = False
-    overlap_right = False
-    OVERLAP_THRESH = 0.50  # valley > 50% of shorter peak → overlapping
-
+    # Find scan boundaries: the valley (minimum) between this peak and neighbors
+    left_bound = 0
+    right_bound = len(intensities) - 1
     for nb in all_peaks_idx:
         if nb == peak_idx:
             continue
         if nb < peak_idx:
-            valley = np.min(intensities[nb:peak_idx + 1])
-            shorter = min(peak_height, intensities[nb])
-            if shorter > 0 and valley / shorter > OVERLAP_THRESH:
-                overlap_left = True
+            valley_idx = nb + np.argmin(intensities[nb:peak_idx])
+            if valley_idx > left_bound:
+                left_bound = valley_idx
         else:
-            valley = np.min(intensities[peak_idx:nb + 1])
-            shorter = min(peak_height, intensities[nb])
-            if shorter > 0 and valley / shorter > OVERLAP_THRESH:
-                overlap_right = True
+            valley_idx = peak_idx + np.argmin(intensities[peak_idx:nb + 1])
+            if valley_idx < right_bound:
+                right_bound = valley_idx
 
-    if not overlap_left and not overlap_right:
-        return standard_fwhm, 'standard'
-
-    # --- HWHM mirroring from the clean side ---
-    # Compute HWHM from the uncontaminated side and double it.
-    # Then take the MAX of standard and HWHM to handle asymmetric peaks:
-    #   - Green phosphor peak: left side is steep, standard is wider → keeps standard
-    #   - Red phosphor peak: standard is artificially narrow → HWHM wins
     def _right_hwhm():
-        for i in range(peak_idx + 1, len(intensities)):
+        for i in range(peak_idx + 1, right_bound + 1):
             if intensities[i] <= half_max_abs:
                 frac = ((intensities[i - 1] - half_max_abs)
                         / (intensities[i - 1] - intensities[i]))
@@ -324,42 +310,28 @@ def _measure_fwhm_robust(wavelengths, intensities, peak_idx, all_peaks_idx,
         return None
 
     def _left_hwhm():
-        for i in range(peak_idx - 1, -1, -1):
+        for i in range(peak_idx - 1, left_bound - 1, -1):
             if intensities[i] <= half_max_abs:
                 frac = ((intensities[i + 1] - half_max_abs)
                         / (intensities[i + 1] - intensities[i]))
                 return (peak_idx - (i + 1 - frac)) / samples_per_nm
         return None
 
-    hwhm_fwhm = None
-    hwhm_side = None
+    left_hw = _left_hwhm()
+    right_hw = _right_hwhm()
 
-    if overlap_left and not overlap_right:
-        hw = _right_hwhm()
-        if hw is not None:
-            hwhm_fwhm = 2.0 * hw
-            hwhm_side = 'right'
-    elif overlap_right and not overlap_left:
-        hw = _left_hwhm()
-        if hw is not None:
-            hwhm_fwhm = 2.0 * hw
-            hwhm_side = 'left'
-    else:
-        # Both sides overlap — try right first (red tail is usually clean)
-        hw = _right_hwhm()
-        if hw is not None:
-            hwhm_fwhm = 2.0 * hw
-            hwhm_side = 'right'
-        else:
-            hw = _left_hwhm()
-            if hw is not None:
-                hwhm_fwhm = 2.0 * hw
-                hwhm_side = 'left'
+    if left_hw is not None and right_hw is not None:
+        return left_hw + right_hw, 'standard'
 
-    if hwhm_fwhm is not None and hwhm_fwhm > standard_fwhm:
-        return hwhm_fwhm, f'hwhm_{hwhm_side}'
+    # One side doesn't cross half-max — mirror the clean side
+    if left_hw is not None:
+        return 2.0 * left_hw, 'hwhm_left'
+    if right_hw is not None:
+        return 2.0 * right_hw, 'hwhm_right'
 
-    return standard_fwhm, 'standard'
+    # Neither side crosses — fall back to scipy prominence-based
+    w = peak_widths(intensities, [peak_idx], rel_height=0.5)
+    return w[0][0] / samples_per_nm, 'prominence_fallback'
 
 
 def analyze_spd(wavelengths, intensities, panel_type='', panel_sub_type=''):

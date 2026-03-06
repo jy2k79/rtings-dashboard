@@ -137,6 +137,33 @@ SPD analysis shows CdSe-like FWHM (green 23.7nm, red 17.6nm) despite Panasonic's
 
 ---
 
+### 6. Model year sort order (reverse chronological)
+**Priority: Low | Effort: Low**
+
+TV model years in the filter menu should be sorted newest-first (e.g. 2026, 2025, 2024…).
+
+---
+
+### 7. PDF download missing on live Streamlit Cloud page
+**Priority: Medium | Effort: Low**
+
+The monthly report PDF download button works locally but is missing on the deployed Streamlit Cloud app. Investigate — likely a missing data file or path issue in the cloud environment.
+
+---
+
+### 8. SPD FWHM calibration check — KSF green & QD-LCD red
+**Priority: High | Effort: Medium**
+
+Sony KSF models show suspiciously narrow green FWHM. QD-LCD reds are spread over a broad range — expected to cluster into two groups (~35nm InP and ~20-25nm CdSe) rather than a continuous spread. Investigate whether peak detection or FWHM measurement has a systematic bias for these cases.
+
+**Investigation plan:**
+- Pull per-TV FWHM values for KSF green and QD-LCD red from `spd_analysis_results.csv`
+- Compare against reference spectra / published literature values
+- Check if peak detection is picking the wrong peak or measuring a shoulder
+- Look for two distinct clusters in QD-LCD red (InP vs CdSe)
+
+---
+
 ## Completed
 
 ### WLED red FWHM propagation verified (2026-02-19)
