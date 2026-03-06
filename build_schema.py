@@ -42,12 +42,11 @@ def map_backlight_type(rtings_value, panel_type):
 
 
 def determine_qd_material(row):
-    """Determine quantum dot material from SPD peak characteristics and brand knowledge.
+    """Determine quantum dot material from SPD red peak FWHM.
 
-    CdSe: Very narrow green (FWHM < 28nm), red peak at ~624-631nm.
-          Used by: Hisense U8/U9 series, TCL QM7/QM8/QM9 series
-    InP (Cd-Free): Wider green (30-38nm), red peak at ~628-638nm.
-          Used by: Samsung, Sony, LG, Panasonic QD sets
+    Two clean clusters in the data with a clear gap at ~30nm:
+      CdSe:        red FWHM 17-28nm (narrow)
+      InP (Cd-Free): red FWHM 34-45nm (wider)
     """
     color_arch = row['color_architecture']
     if color_arch not in ('QD-LCD', 'QD-OLED'):
@@ -57,32 +56,16 @@ def determine_qd_material(row):
     if color_arch == 'QD-OLED':
         return 'InP'
 
-    # QD-LCD: determine from green peak FWHM
-    green_fwhm = row.get('green_fwhm_nm', '')
-    brand = row['brand']
-
-    # Brand-based heuristic (confirmed from ground truth Excel):
-    # - Samsung, Sony, LG, Panasonic: InP (Cd-Free)
-    # - Hisense U8/U9 line, TCL QM7/QM8/QM9 line: CdSe
-    if brand in ('Samsung', 'Sony', 'LG', 'Panasonic', 'Philips'):
-        return 'InP'
-
-    # For Hisense/TCL/others, use green FWHM as discriminator
+    # QD-LCD: classify from red FWHM — clean bimodal split at ~30nm
+    CDSE_INP_THRESHOLD = 30  # nm — gap between clusters is 28-34nm
     try:
-        g_fwhm = float(green_fwhm)
-        if g_fwhm < 28:
+        r_fwhm = float(row.get('red_fwhm_nm', ''))
+        if r_fwhm < CDSE_INP_THRESHOLD:
             return 'CdSe'
         else:
             return 'InP'
     except (ValueError, TypeError):
-        pass
-
-    # Fallback brand heuristics
-    if brand == 'Hisense':
-        return 'CdSe'  # Hisense QD-LCD models use CdSe
-    if brand == 'TCL':
-        return 'CdSe'  # TCL QD-LCD models use CdSe
-    return 'Unknown'
+        return 'Unknown'
 
 
 def determine_marketing_label(row):

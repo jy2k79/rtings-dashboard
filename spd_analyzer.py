@@ -629,6 +629,10 @@ def load_ground_truth():
         # Store by multiple keys for matching
         lookup[f"{brand}|{model}"] = {"tech": tech, "qd_type": qd_type}
 
+    # Corrections to Excel ground truth (verified via SPD inspection)
+    # 100U8QG uses KSF (5 peaks with narrow red lines), not QD-LCD.
+    lookup["Hisense|100U8QG"] = {"tech": "KSF", "qd_type": ""}
+
     return lookup
 
 
@@ -642,6 +646,7 @@ def match_ground_truth(fullname, brand, lookup):
     fn_lower = fullname.lower()
     best_match = None
     best_score = 0
+    best_gt_len = 0
 
     # Marketing/type suffixes to strip from both sides
     strip_words = ["qled", "oled", "series", "mini-led", "mini", "led"]
@@ -690,8 +695,11 @@ def match_ground_truth(fullname, brand, lookup):
         if score < 0.7:
             continue
 
-        if score > best_score:
+        # On ties, prefer more specific (longer) GT model keys
+        gt_specificity = len(gt_model)
+        if score > best_score or (score == best_score and gt_specificity > best_gt_len):
             best_score = score
+            best_gt_len = gt_specificity
             best_match = val
 
     return best_match
