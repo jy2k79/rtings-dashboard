@@ -18,6 +18,7 @@ Usage:
     python rtings_scraper.py
 """
 
+import re
 import httpx
 import json
 import time
@@ -36,9 +37,9 @@ HEADERS = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
 }
 
-# Test bench IDs for v2.0+
-# 210 = v2.1, 197 = v2.0.1
-V2_BENCH_IDS = ["210", "197"]
+# Fallback bench IDs if dynamic discovery fails
+# 210 = v2.1, 197 = v2.0.1, 227 = v2.2
+FALLBACK_BENCH_IDS = ["227", "210", "197"]
 
 # Delay between API requests (seconds) — be polite to RTINGS
 REQUEST_DELAY = 2.0
@@ -133,13 +134,54 @@ def api_post(endpoint: str, variables: dict, client: httpx.Client) -> dict:
 
 
 # =============================================================================
+# DYNAMIC BENCH DISCOVERY
+# =============================================================================
+def discover_v2_bench_ids(client: httpx.Client) -> list[str]:
+    """Discover all v2.0+ test bench IDs from the RTINGS API.
+
+    Calls the column_options endpoint (already implemented at fetch_column_options)
+    to read the list of test benches, then filters to v2.0+.
+    Falls back to FALLBACK_BENCH_IDS on error.
+    """
+    VERSION_PATTERN = re.compile(r'^v(\d+)\.(\d+)(?:\.(\d+))?$')
+    MIN_VERSION = (2, 0, 0)
+
+    try:
+        print("Discovering test bench IDs from RTINGS API...")
+        silo = fetch_column_options(client)
+        benches = silo.get("test_benches", [])
+
+        v2_ids = []
+        for bench in benches:
+            display_name = bench.get("display_name", "")
+            match = VERSION_PATTERN.match(display_name)
+            if not match:
+                continue
+            version = (int(match.group(1)), int(match.group(2)), int(match.group(3) or 0))
+            if version >= MIN_VERSION:
+                v2_ids.append(str(bench["id"]))
+                print(f"  Found bench: {display_name} (ID {bench['id']})")
+
+        if not v2_ids:
+            print("  WARNING: No v2.0+ benches found — falling back to FALLBACK_BENCH_IDS")
+            return list(FALLBACK_BENCH_IDS)
+
+        print(f"  Discovered {len(v2_ids)} v2.0+ bench IDs: {v2_ids}")
+        return v2_ids
+
+    except Exception as e:
+        print(f"  WARNING: Bench discovery failed ({e}) — falling back to FALLBACK_BENCH_IDS")
+        return list(FALLBACK_BENCH_IDS)
+
+
+# =============================================================================
 # DATA FETCHING
 # =============================================================================
-def fetch_products(client: httpx.Client) -> list[dict]:
-    """Fetch all TV products for v2.0+ test benches."""
-    print(f"Fetching product list for bench IDs: {V2_BENCH_IDS}...")
+def fetch_products(client: httpx.Client, bench_ids: list[str]) -> list[dict]:
+    """Fetch all TV products for the given test bench IDs."""
+    print(f"Fetching product list for bench IDs: {bench_ids}...")
     data = api_post("table_tool__products_list", {
-        "test_bench_ids": V2_BENCH_IDS,
+        "test_bench_ids": bench_ids,
         "named_version": "public",
         "is_admin": False,
     }, client)
@@ -148,13 +190,13 @@ def fetch_products(client: httpx.Client) -> list[dict]:
     return products
 
 
-def fetch_test_results(client: httpx.Client) -> list[dict]:
+def fetch_test_results(client: httpx.Client, bench_ids: list[str]) -> list[dict]:
     """Fetch test results for all key measurements."""
     test_ids = list(TEST_IDS.keys())
     print(f"Fetching test results for {len(test_ids)} tests...")
     time.sleep(REQUEST_DELAY)
     data = api_post("table_tool__test_results", {
-        "test_bench_ids": V2_BENCH_IDS,
+        "test_bench_ids": bench_ids,
         "original_ids": test_ids,
         "named_version": "public",
         "is_admin": False,
@@ -164,13 +206,13 @@ def fetch_test_results(client: httpx.Client) -> list[dict]:
     return results
 
 
-def fetch_ratings(client: httpx.Client) -> list[dict]:
+def fetch_ratings(client: httpx.Client, bench_ids: list[str]) -> list[dict]:
     """Fetch usage/performance ratings."""
     usage_ids = list(USAGE_IDS.keys())
     print(f"Fetching ratings for {len(usage_ids)} usage/performance scores...")
     time.sleep(REQUEST_DELAY)
     data = api_post("table_tool__ratings", {
-        "test_bench_ids": V2_BENCH_IDS,
+        "test_bench_ids": bench_ids,
         "original_ids": usage_ids,
         "named_version": "public",
     }, client)
@@ -258,9 +300,30 @@ def merge_ratings(records: dict[str, dict], ratings: list[dict]):
 # =============================================================================
 # SPD IMAGE DOWNLOAD
 # =============================================================================
-def download_spd_images(records: dict[str, dict], output_dir: Path):
-    """Download SPD images for all products that have them."""
+def download_spd_images(records: dict[str, dict], output_dir: Path,
+                        old_bench_map: dict[str, str] | None = None):
+    """Download SPD images for all products that have them.
+
+    If old_bench_map is provided, delete cached SPD images for any product
+    whose test_bench_id changed (forces re-download with new bench data).
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Invalidate cached SPDs for products that moved to a new bench
+    invalidated = 0
+    if old_bench_map:
+        for pid, rec in records.items():
+            old_bench = old_bench_map.get(pid)
+            new_bench = str(rec.get("test_bench_id", ""))
+            if old_bench and new_bench and old_bench != new_bench:
+                safe_name = rec["url_part"].replace("/", "-")
+                cached = output_dir / f"{safe_name}_spd.jpg"
+                if cached.exists():
+                    cached.unlink()
+                    invalidated += 1
+                    print(f"  Invalidated cached SPD: {rec['fullname']} (bench {old_bench} → {new_bench})")
+        if invalidated:
+            print(f"  Invalidated {invalidated} cached SPD images due to bench changes")
 
     spd_products = [
         (pid, r) for pid, r in records.items()
@@ -306,7 +369,7 @@ def download_spd_images(records: dict[str, dict], output_dir: Path):
 # =============================================================================
 # OUTPUT
 # =============================================================================
-def save_outputs(records: dict[str, dict], output_dir: Path):
+def save_outputs(records: dict[str, dict], output_dir: Path, bench_ids: list[str] | None = None):
     """Save scraped data to CSV, JSON, and Excel."""
     output_dir.mkdir(parents=True, exist_ok=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
@@ -360,7 +423,7 @@ def save_outputs(records: dict[str, dict], output_dir: Path):
     with open(json_path, "w") as f:
         json.dump({
             "scraped_at": datetime.now(timezone.utc).isoformat(),
-            "test_bench_ids": V2_BENCH_IDS,
+            "test_bench_ids": bench_ids or FALLBACK_BENCH_IDS,
             "total_products": len(json_records),
             "products": json_records,
         }, f, indent=2)
@@ -422,19 +485,36 @@ def print_summary(df: pd.DataFrame):
 def main():
     print("=" * 70)
     print("RTINGS TV Data Scraper")
-    print(f"Target: Test Bench v2.0+ (IDs: {V2_BENCH_IDS})")
     print(f"Timestamp: {datetime.now(timezone.utc).isoformat()}")
     print("=" * 70)
 
+    # Load old data to detect bench changes (for SPD cache invalidation)
+    old_csv = OUTPUT_DIR / "rtings_tv_data.csv"
+    old_bench_map = {}
+    if old_csv.exists():
+        try:
+            old_df = pd.read_csv(old_csv, usecols=["product_id", "test_bench_id"])
+            old_bench_map = dict(zip(
+                old_df["product_id"].astype(str),
+                old_df["test_bench_id"].astype(str),
+            ))
+            print(f"Loaded old bench map for {len(old_bench_map)} products")
+        except Exception as e:
+            print(f"WARNING: Could not load old bench map: {e}")
+
     with httpx.Client(headers=HEADERS) as client:
+        # Step 0: Discover v2.0+ bench IDs dynamically
+        bench_ids = discover_v2_bench_ids(client)
+        print(f"\nTarget: Test Bench v2.0+ (IDs: {bench_ids})")
+
         # Step 1: Fetch products
-        products = fetch_products(client)
+        products = fetch_products(client, bench_ids)
 
         # Step 2: Fetch test results
-        test_results = fetch_test_results(client)
+        test_results = fetch_test_results(client, bench_ids)
 
         # Step 3: Fetch ratings
-        ratings = fetch_ratings(client)
+        ratings = fetch_ratings(client, bench_ids)
 
     # Step 4: Assemble records
     print("\nAssembling product records...")
@@ -443,12 +523,12 @@ def main():
     merge_ratings(records, ratings)
     print(f"  -> {len(records)} complete product records")
 
-    # Step 5: Download SPD images
-    download_spd_images(records, SPD_DIR)
+    # Step 5: Download SPD images (invalidate cache for bench-changed products)
+    download_spd_images(records, SPD_DIR, old_bench_map=old_bench_map)
 
     # Step 6: Save outputs
     print("\nSaving output files...")
-    df = save_outputs(records, OUTPUT_DIR)
+    df = save_outputs(records, OUTPUT_DIR, bench_ids=bench_ids)
 
     # Step 7: Summary
     print_summary(df)

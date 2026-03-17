@@ -38,7 +38,25 @@ DATA_DIR = Path("data")
 DATA_DIR.mkdir(exist_ok=True)
 
 RTINGS_API = "https://www.rtings.com/api/v2/safe/"
-TEST_BENCH_IDS = ["210", "197"]
+
+# Fallback bench IDs if scraper CSV is unavailable
+_FALLBACK_BENCH_IDS = ["227", "210", "197"]
+
+
+def _get_bench_ids() -> list[str]:
+    """Derive bench IDs from scraper output, fall back to hardcoded list."""
+    csv_path = DATA_DIR / "rtings_tv_data.csv"
+    if csv_path.exists():
+        try:
+            df = pd.read_csv(csv_path, usecols=["test_bench_id"])
+            ids = sorted(df["test_bench_id"].dropna().astype(int).unique().astype(str).tolist())
+            if ids:
+                print(f"  Bench IDs from scraper output: {ids}")
+                return ids
+        except Exception as e:
+            print(f"  WARNING: Could not read bench IDs from {csv_path}: {e}")
+    print(f"  Using fallback bench IDs: {_FALLBACK_BENCH_IDS}")
+    return list(_FALLBACK_BENCH_IDS)
 
 # Screen area lookup (diagonal inches → m²) for price/m² calculations
 # Using 16:9 aspect ratio: area = (diag * 0.0254)² * (16/√(16²+9²)) * (9/√(16²+9²))
@@ -56,11 +74,12 @@ SCREEN_AREA_M2 = {
 def fetch_rtings_prices():
     """Fetch affiliate link data from RTINGS API for all products."""
     print("Fetching RTINGS affiliate links...")
+    bench_ids = _get_bench_ids()
     with httpx.Client(timeout=30) as client:
         # US prices
         resp_us = client.post(
             f"{RTINGS_API}table_tool__prices",
-            json={"variables": {"test_bench_ids": TEST_BENCH_IDS, "country_id": "2"}}
+            json={"variables": {"test_bench_ids": bench_ids, "country_id": "2"}}
         )
         us_data = resp_us.json()["data"]["test_bench_prices"]
         print(f"  US prices: {len(us_data)} records")
@@ -70,7 +89,7 @@ def fetch_rtings_prices():
         # Canada prices (for additional Amazon ASINs)
         resp_ca = client.post(
             f"{RTINGS_API}table_tool__prices",
-            json={"variables": {"test_bench_ids": TEST_BENCH_IDS, "country_id": "1"}}
+            json={"variables": {"test_bench_ids": bench_ids, "country_id": "1"}}
         )
         ca_data = resp_ca.json()["data"]["test_bench_prices"]
         print(f"  CA prices: {len(ca_data)} records")

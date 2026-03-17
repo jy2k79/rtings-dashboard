@@ -72,6 +72,43 @@ def run_script(name, abort_on_fail=True):
 
 
 # ---------------------------------------------------------------------------
+# Drop guard — prevent catastrophic data loss
+# ---------------------------------------------------------------------------
+
+def check_drop_guard(old_count: int, new_csv_path: Path):
+    """Abort the pipeline if the scraper output looks catastrophically wrong.
+
+    Raises RuntimeError if:
+      - Scraper produced 0 TVs
+      - TV count dropped by >10 TVs AND >20% (both must be exceeded)
+    """
+    if not new_csv_path.exists():
+        raise RuntimeError(
+            f"Drop guard FAILED: scraper output missing ({new_csv_path})"
+        )
+
+    new_df = pd.read_csv(new_csv_path)
+    new_count = len(new_df)
+
+    if new_count == 0:
+        raise RuntimeError(
+            "Drop guard FAILED: scraper returned 0 TVs — aborting to prevent data loss"
+        )
+
+    if old_count > 0:
+        drop = old_count - new_count
+        drop_pct = drop / old_count * 100
+        if drop > 10 and drop_pct > 20:
+            raise RuntimeError(
+                f"Drop guard FAILED: TV count dropped from {old_count} to {new_count} "
+                f"({drop} TVs, {drop_pct:.0f}%) — aborting to prevent data loss. "
+                f"If this is expected, delete the old CSV and re-run."
+            )
+
+    log(f"Drop guard passed: {old_count} → {new_count} TVs")
+
+
+# ---------------------------------------------------------------------------
 # Change detection
 # ---------------------------------------------------------------------------
 
@@ -145,6 +182,20 @@ def detect_changes(old_db, new_db):
                 "field": "color_architecture",
                 "old_value": str(old_tech),
                 "new_value": str(new_tech),
+            })
+
+        # Bench version change
+        old_bench = str(old_row.get("test_bench_version", ""))
+        new_bench = str(new_row.get("test_bench_version", ""))
+        if old_bench and new_bench and old_bench != new_bench:
+            changes.append({
+                "date": TODAY,
+                "product_id": pid,
+                "fullname": new_row.get("fullname", ""),
+                "change_type": "bench_change",
+                "field": "test_bench_version",
+                "old_value": old_bench,
+                "new_value": new_bench,
             })
 
     return changes
@@ -263,6 +314,7 @@ def build_email_report(summary, changes, errors, old_count, new_count, n_priced)
     new_tvs = [c for c in changes if c["change_type"] == "new_tv"]
     removed_tvs = [c for c in changes if c["change_type"] == "removed_tv"]
     score_changes = [c for c in changes if c["change_type"] == "score_change"]
+    bench_changes = [c for c in changes if c["change_type"] == "bench_change"]
 
     if new_tvs:
         html += '<h3 style="color:#4ade80;margin-bottom:8px">New TVs</h3><ul style="margin:0;padding-left:20px">'
@@ -274,6 +326,14 @@ def build_email_report(summary, changes, errors, old_count, new_count, n_priced)
         html += '<h3 style="color:#f87171;margin-bottom:8px">Removed TVs</h3><ul style="margin:0;padding-left:20px">'
         for c in removed_tvs:
             html += f'<li style="padding:2px 0">{c["fullname"]}</li>'
+        html += '</ul>'
+
+    if bench_changes:
+        html += f'<h3 style="color:#60a5fa;margin-bottom:8px">Bench Version Changes ({len(bench_changes)})</h3><ul style="margin:0;padding-left:20px">'
+        for c in bench_changes[:20]:
+            html += f'<li style="padding:2px 0">{c["fullname"]}: {c["old_value"]} → {c["new_value"]}</li>'
+        if len(bench_changes) > 20:
+            html += f'<li style="color:#999">...and {len(bench_changes) - 20} more</li>'
         html += '</ul>'
 
     if score_changes:
@@ -351,6 +411,23 @@ def main():
     except Exception as e:
         errors.append(f"Scraper failed: {e}")
         notify("TV Data Update FAILED", f"Scraper error: {e}")
+        sys.exit(1)
+
+    # --- Step 1b: Drop guard — abort if scraper output looks wrong ---
+    scraper_csv = DATA / "rtings_tv_data.csv"
+    try:
+        check_drop_guard(old_count, scraper_csv)
+    except RuntimeError as e:
+        log(str(e), "ERROR")
+        notify("TV Data Update ABORTED", str(e))
+        send_email(
+            f"TV Dashboard ABORTED — {TODAY}",
+            f'<div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;color:#e0e0e0;background:#1a1a2e;padding:24px;border-radius:8px">'
+            f'<h2 style="color:#f87171;margin-top:0">Pipeline Aborted — Drop Guard</h2>'
+            f'<p>{e}</p>'
+            f'<p style="color:#999">Previous count: {old_count}</p>'
+            f'</div>'
+        )
         sys.exit(1)
 
     # --- Step 2: SPD Analysis ---
