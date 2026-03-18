@@ -173,6 +173,31 @@ def recover_blurred_scores(old_priced_path: Path, new_priced_path: Path):
 # Change detection
 # ---------------------------------------------------------------------------
 
+def _classification_alert(fullname: str, color_arch: str, marketing: str) -> str | None:
+    """Return a reason string if a new TV's classification deserves manual review.
+
+    Flags:
+      - QNED models classified as anything other than KSF/WLED (2026+ expected zero QD)
+      - Marketing says QLED/QNED but SPD says KSF or WLED
+      - New OLEDs that aren't WOLED or QD-OLED
+    """
+    name_upper = fullname.upper()
+
+    # QNED models classified as QD — high bar for 2026+
+    if "QNED" in name_upper and color_arch in ("QD-LCD", "Pseudo QD"):
+        return f"QNED classified as {color_arch} — verify QD content (2026+ expected zero QD)"
+
+    # QLED marketing but classified as WLED (no QD or KSF detected)
+    if marketing in ("QLED", "QNED", "ULED") and color_arch == "WLED":
+        return f"Marketed as {marketing} but classified as WLED — check SPD"
+
+    # OLED that isn't WOLED or QD-OLED
+    if color_arch and "OLED" in name_upper and color_arch not in ("WOLED", "QD-OLED") and "LCD" not in color_arch:
+        return f"OLED model classified as {color_arch} — expected WOLED or QD-OLED"
+
+    return None
+
+
 def detect_changes(old_db, new_db):
     """Compare old and new tv_database to detect changes."""
     changes = []
@@ -180,18 +205,35 @@ def detect_changes(old_db, new_db):
     old_ids = set(old_db["product_id"].astype(str))
     new_ids = set(new_db["product_id"].astype(str))
 
-    # New TVs
+    # New TVs + classification review
     for pid in new_ids - old_ids:
         row = new_db[new_db["product_id"].astype(str) == pid].iloc[0]
+        fullname = row.get("fullname", "")
+        color_arch = row.get("color_architecture", "")
+        marketing = row.get("marketing_label", "")
+
         changes.append({
             "date": TODAY,
             "product_id": pid,
-            "fullname": row.get("fullname", ""),
+            "fullname": fullname,
             "change_type": "new_tv",
             "field": "",
             "old_value": "",
-            "new_value": row.get("color_architecture", ""),
+            "new_value": color_arch,
         })
+
+        # Flag classification surprises for manual review
+        alert = _classification_alert(fullname, color_arch, marketing)
+        if alert:
+            changes.append({
+                "date": TODAY,
+                "product_id": pid,
+                "fullname": fullname,
+                "change_type": "classification_review",
+                "field": "color_architecture",
+                "old_value": alert,  # reason for flag
+                "new_value": color_arch,
+            })
 
     # Removed TVs
     for pid in old_ids - new_ids:
@@ -376,11 +418,21 @@ def build_email_report(summary, changes, errors, old_count, new_count, n_priced)
     removed_tvs = [c for c in changes if c["change_type"] == "removed_tv"]
     score_changes = [c for c in changes if c["change_type"] == "score_change"]
     bench_changes = [c for c in changes if c["change_type"] == "bench_change"]
+    class_reviews = [c for c in changes if c["change_type"] == "classification_review"]
 
     if new_tvs:
         html += '<h3 style="color:#4ade80;margin-bottom:8px">New TVs</h3><ul style="margin:0;padding-left:20px">'
         for c in new_tvs:
             html += f'<li style="padding:2px 0">{c["fullname"]} ({c["new_value"]})</li>'
+        html += '</ul>'
+
+    if class_reviews:
+        html += f'<h3 style="color:#f59e0b;margin-bottom:8px">⚠ Classification Review ({len(class_reviews)})</h3>'
+        html += '<p style="color:#999;font-size:13px;margin:4px 0 8px">These new TVs have classifications that may need manual verification:</p>'
+        html += '<ul style="margin:0;padding-left:20px">'
+        for c in class_reviews:
+            html += (f'<li style="padding:4px 0"><b>{c["fullname"]}</b> → {c["new_value"]}'
+                     f'<br><span style="color:#f59e0b;font-size:13px">{c["old_value"]}</span></li>')
         html += '</ul>'
 
     if removed_tvs:

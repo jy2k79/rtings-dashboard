@@ -343,6 +343,7 @@ def download_spd_images(records: dict[str, dict], output_dir: Path,
 
     downloaded = 0
     skipped = 0
+    stale = 0
     failed = 0
 
     with httpx.Client(headers={
@@ -356,9 +357,25 @@ def download_spd_images(records: dict[str, dict], output_dir: Path,
             filepath = output_dir / filename
 
             if filepath.exists():
-                skipped += 1
-                rec["spd_image_local"] = str(filepath)
-                continue
+                # Staleness check: compare cached file size with remote Content-Length
+                try:
+                    head = client.head(url, timeout=10)
+                    remote_size = int(head.headers.get("content-length", 0))
+                    local_size = filepath.stat().st_size
+                    if remote_size > 0 and abs(remote_size - local_size) > 100:
+                        print(f"  Stale SPD detected: {rec['fullname']} "
+                              f"(local={local_size}B, remote={remote_size}B)")
+                        filepath.unlink()
+                        stale += 1
+                    else:
+                        skipped += 1
+                        rec["spd_image_local"] = str(filepath)
+                        continue
+                except Exception:
+                    # HEAD failed — keep cached version
+                    skipped += 1
+                    rec["spd_image_local"] = str(filepath)
+                    continue
 
             try:
                 print(f"  [{i+1}/{len(spd_products)}] {rec['fullname']}...")
@@ -373,7 +390,8 @@ def download_spd_images(records: dict[str, dict], output_dir: Path,
                 rec["spd_image_local"] = ""
                 failed += 1
 
-    print(f"  Downloaded: {downloaded}, Skipped (cached): {skipped}, Failed: {failed}")
+    print(f"  Downloaded: {downloaded}, Skipped (cached): {skipped}, "
+          f"Stale (re-downloaded): {stale}, Failed: {failed}")
 
 
 # =============================================================================
