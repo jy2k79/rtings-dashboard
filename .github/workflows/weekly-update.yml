@@ -35,6 +35,7 @@ jobs:
         env:
           KEEPA_API_KEY: ${{ secrets.KEEPA_API_KEY }}
           BESTBUY_API_KEY: ${{ secrets.BESTBUY_API_KEY }}
+          RTINGS_SESSION: ${{ secrets.RTINGS_SESSION }}
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
