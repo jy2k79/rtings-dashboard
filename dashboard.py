@@ -571,7 +571,8 @@ page = st.sidebar.radio("View", ALL_PAGES, index=default_idx)
 # ============================================================================
 if page == "Overview":
     st.title("TV Display Technology Dashboard")
-    st.caption(f"Database: {len(df)} TVs — test bench v2.0+")
+    st.caption(f"Database: {len(df)} TVs — test bench v2.0+ · "
+               "Data covers RTINGS-reviewed models only, not the full TV market")
 
     priced = fdf[fdf["price_best"].notna()]
     c1, c2, c3, c4, c5 = st.columns(5)
@@ -1241,8 +1242,8 @@ elif page == "Price Analyzer":
 
     # --- Headline: Technology Cost per m² with WLED premium ---
     st.subheader("Technology Cost per m\u00b2")
-    st.caption("Average price per square meter by display technology, with premium over WLED baseline. "
-               "Size-normalized pricing gives the truest comparison across technologies.")
+    st.caption("Median price per square meter by display technology, with premium over WLED baseline. "
+               "Per-product median across all available sizes. Data limited to RTINGS-reviewed models.")
 
     m2_data = (priced.dropna(subset=["price_per_m2"])
                .groupby("color_architecture", observed=True)["price_per_m2"]
