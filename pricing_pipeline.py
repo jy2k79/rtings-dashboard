@@ -596,7 +596,10 @@ def merge_pricing(retailer_df, keepa_df, bestbuy_df):
     # Append to rolling price history
     append_price_history(prices_df, tv_db)
 
-    # Also create a per-product summary (best price at most common comparison size = 65")
+    # Per-product pricing summary
+    # Uses median $/m² across ALL available sizes (not just 65") for fair
+    # technology comparison. Also keeps a representative absolute price
+    # (65" preferred) for dollar-amount displays.
     summary_rows = []
     for pid in tv_db['product_id'].unique():
         pid_str = str(pid)
@@ -609,40 +612,47 @@ def merge_pricing(retailer_df, keepa_df, bestbuy_df):
             })
             continue
 
-        # Prefer 65" price, then closest to 65"
         sizes_available = prod_prices['size_inches'].dropna().unique()
-        best_row = None
-        if 65 in sizes_available:
-            best_row = prod_prices[prod_prices['size_inches'] == 65].iloc[0]
-        elif len(sizes_available) > 0:
-            closest = min(sizes_available, key=lambda x: abs(x - 65))
-            best_row = prod_prices[prod_prices['size_inches'] == closest].iloc[0]
-        else:
-            # Use any row with a price
-            priced = prod_prices[prod_prices['best_price'].notna()]
-            if len(priced) > 0:
-                best_row = priced.iloc[0]
+        priced_rows = prod_prices[prod_prices['best_price'].notna()]
 
-        if best_row is not None:
+        if len(priced_rows) == 0:
             summary_rows.append({
                 'product_id': pid,
-                'price_size': best_row.get('size_inches'),
-                'price_best': best_row.get('best_price'),
-                'price_source': best_row.get('price_source'),
-                'price_amazon': best_row.get('amazon_price'),
-                'price_buybox': best_row.get('buy_box_price'),
-                'price_bestbuy': best_row.get('bestbuy_price'),
-                'price_list': best_row.get('list_price'),
-                'price_per_m2': best_row.get('price_per_m2'),
                 'sizes_with_price': len(sizes_available),
-                'all_asins': ','.join(str(a) for a in prod_prices['amazon_asin'].dropna().unique()),
-                'all_bb_skus': ','.join(str(s) for s in prod_prices['bestbuy_sku'].dropna().unique()),
             })
-        else:
-            summary_rows.append({
-                'product_id': pid,
-                'sizes_with_price': 0,
-            })
+            continue
+
+        # Median $/m² across ALL sizes for this product family
+        all_m2 = priced_rows['price_per_m2'].dropna()
+        median_per_m2 = all_m2.median() if len(all_m2) > 0 else None
+
+        # Representative price: prefer 65", then closest to 65" (among rows with a price)
+        best_row = None
+        priced_sizes = priced_rows['size_inches'].dropna().unique()
+        if 65 in priced_sizes:
+            best_row = priced_rows[priced_rows['size_inches'] == 65].iloc[0]
+        elif len(priced_sizes) > 0:
+            closest = min(priced_sizes, key=lambda x: abs(x - 65))
+            best_row = priced_rows[priced_rows['size_inches'] == closest].iloc[0]
+        elif len(priced_rows) > 0:
+            best_row = priced_rows.iloc[0]
+
+        summary_rows.append({
+            'product_id': pid,
+            'price_size': best_row.get('size_inches') if best_row is not None else None,
+            'price_best': best_row.get('best_price') if best_row is not None else None,
+            'price_source': best_row.get('price_source') if best_row is not None else None,
+            'price_amazon': best_row.get('amazon_price') if best_row is not None else None,
+            'price_buybox': best_row.get('buy_box_price') if best_row is not None else None,
+            'price_bestbuy': best_row.get('bestbuy_price') if best_row is not None else None,
+            'price_list': best_row.get('list_price') if best_row is not None else None,
+            'price_per_m2': median_per_m2,
+            'sizes_with_price': len(sizes_available),
+            'size_min': int(min(sizes_available)) if len(sizes_available) > 0 else None,
+            'size_max': int(max(sizes_available)) if len(sizes_available) > 0 else None,
+            'all_asins': ','.join(str(a) for a in prod_prices['amazon_asin'].dropna().unique()),
+            'all_bb_skus': ','.join(str(s) for s in prod_prices['bestbuy_sku'].dropna().unique()),
+        })
 
     summary_df = pd.DataFrame(summary_rows)
 
@@ -719,7 +729,7 @@ def print_pricing_summary(tv_df, prices_df):
     if len(priced) == 0:
         return
 
-    print(f"\nPrice by color_architecture (best available price):")
+    print(f"\nPrice by color_architecture (median $/m² across all sizes per product):")
     print(f"  {'Technology':<15s} {'Count':>5s} {'Min':>8s} {'Median':>8s} {'Max':>8s} {'$/m²':>8s}")
     print(f"  {'─'*15} {'─'*5} {'─'*8} {'─'*8} {'─'*8} {'─'*8}")
 

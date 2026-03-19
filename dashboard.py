@@ -460,7 +460,7 @@ if page == "Overview":
     c2.metric("With Pricing", len(priced))
     c3.metric("Brands", fdf["brand"].nunique())
     c4.metric("Avg Price", f"${priced['price_best'].mean():,.0f}" if len(priced) else "N/A")
-    c5.metric("Avg $/m\u00b2", f"${priced['price_per_m2'].mean():,.0f}" if len(priced) else "N/A")
+    c5.metric("Median $/m\u00b2", f"${priced['price_per_m2'].median():,.0f}" if len(priced) else "N/A")
 
     st.divider()
 

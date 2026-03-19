@@ -13,7 +13,7 @@ product_id,fullname,sku_id,size_inches,amazon_asin,bestbuy_sku,rtings_price,avai
 37906,Roku Select Series 2023,9660,,B0CLFSWK9V,,,out_of_stock,2
 37906,Roku Select Series 2023,9661,,,,,no_link,2
 37906,Roku Select Series 2023,9662,,,,,no_link,2
-37906,Roku Select Series 2023,9663,65.0,,6536726,279.99,location_dependent,2
+37906,Roku Select Series 2023,9663,,,,,no_link,2
 37906,Roku Select Series 2023,9664,,,,,no_link,2
 41473,Sharp AQUOS XLED FV1 ,10155,,,,,direct_link,2
 41473,Sharp AQUOS XLED FV1 ,10156,,,,,direct_link,2
@@ -50,7 +50,7 @@ product_id,fullname,sku_id,size_inches,amazon_asin,bestbuy_sku,rtings_price,avai
 49542,LG G4 OLED,10492,55.0,B0D3WKV3X7,6578049,1899.99,location_dependent,2
 49542,LG G4 OLED,10493,,B0D3WY2FHF,,3399.99,in_stock,2
 49542,LG G4 OLED,10494,77.0,,6578047,2804.99,location_dependent,2
-49542,LG G4 OLED,10495,83.0,B0D3W7ZJ75,6578149,3249.99,location_dependent,2
+49542,LG G4 OLED,10495,,B0D3W7ZJ75,,3999.99,in_stock,2
 49542,LG G4 OLED,10496,,B0D3WSDWVJ,,19999.99,in_stock,2
 49541,LG C4 OLED,10499,,B0D3WVN6LH,,1499.99,in_stock,2
 49541,LG C4 OLED,10500,,B0CVRMHRSZ,,897.9,amazon,2
@@ -58,7 +58,7 @@ product_id,fullname,sku_id,size_inches,amazon_asin,bestbuy_sku,rtings_price,avai
 49541,LG C4 OLED,10502,65.0,,6578042,1274.99,location_dependent,2
 49541,LG C4 OLED,10503,77.0,B0D3WWGP6T,6578044,1975.99,location_dependent,2
 49541,LG C4 OLED,10504,,,,5399.99,in_stock,2
-56163,Samsung The Frame 2024,10542,43.0,B0CV9HY4J9,,,third_party,2
+56163,Samsung The Frame 2024,10542,43.0,,,999.99,in_stock,2
 56163,Samsung The Frame 2024,10543,50.0,B0CVSHWGXX,,1299.99,in_stock,2
 56163,Samsung The Frame 2024,10544,55.0,B0CVSJ1ZBP,6576585,699.99,in_stock,2
 56163,Samsung The Frame 2024,10545,65.0,B0CVSJKFNK,6576593,899.99,location_dependent,2
@@ -88,7 +88,7 @@ product_id,fullname,sku_id,size_inches,amazon_asin,bestbuy_sku,rtings_price,avai
 57721,LG UT75,10700,,B0D3WG1HCS,,349.95,in_stock,2
 57721,LG UT75,10701,,B0CVSJQRNZ,,422.69,third_party,2
 57721,LG UT75,10702,,,,529.99,in_stock,2
-57721,LG UT75,10703,75.0,,6578189,349.99,location_dependent,2
+57721,LG UT75,10703,,,,749.99,in_stock,2
 57721,LG UT75,10704,,B0D3WP2JLD,,749.99,in_stock,2
 57721,LG UT75,10870,,B0CVSJ3HS7,,,out_of_stock,2
 49704,Samsung S85D OLED,10756,55.0,,,1349.99,in_stock,2
@@ -325,7 +325,7 @@ product_id,fullname,sku_id,size_inches,amazon_asin,bestbuy_sku,rtings_price,avai
 92245,Sony BRAVIA 2 II,14439,65.0,,6623764,669.99,in_stock,2
 92245,Sony BRAVIA 2 II,14440,75.0,,6623765,869.99,in_stock,2
 88502,Panasonic Z95B OLED,14866,,B0F8M9QPJP,,2194.96,amazon,2
-88502,Panasonic Z95B OLED,14867,,B0F8MW11YS,,2569.6,out_of_stock,2
+88502,Panasonic Z95B OLED,14867,,B0F8MW11YS,,2697.99,out_of_stock,2
 88502,Panasonic Z95B OLED,14868,,B0F8N24XYR,,,out_of_stock,2
 96489,LG QNED92A,14901,,,,999.99,in_stock,2
 96489,LG QNED92A,14902,,,,1399.99,in_stock,2
