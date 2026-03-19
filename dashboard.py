@@ -472,11 +472,11 @@ if page == "Overview":
             m2_hero = (priced.dropna(subset=["price_per_m2"])
                        .groupby("color_architecture", observed=True)["price_per_m2"]
                        .median().reset_index())
-            m2_hero.columns = ["Technology", "Avg $/m\u00b2"]
-            wled_base = m2_hero.loc[m2_hero["Technology"] == "WLED", "Avg $/m\u00b2"]
+            m2_hero.columns = ["Technology", "Median $/m\u00b2"]
+            wled_base = m2_hero.loc[m2_hero["Technology"] == "WLED", "Median $/m\u00b2"]
             wled_hero = float(wled_base.iloc[0]) if len(wled_base) > 0 else None
-            fig = px.bar(m2_hero, x="Technology", y="Avg $/m\u00b2", color="Technology",
-                         color_discrete_map=TECH_COLORS, text="Avg $/m\u00b2",
+            fig = px.bar(m2_hero, x="Technology", y="Median $/m\u00b2", color="Technology",
+                         color_discrete_map=TECH_COLORS, text="Median $/m\u00b2",
                          category_orders={"Technology": TECH_ORDER})
             fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside",
                               textfont_size=13, textfont_weight=600, cliponaxis=False)
@@ -1128,12 +1128,12 @@ elif page == "Price Analyzer":
     m2_data = (priced.dropna(subset=["price_per_m2"])
                .groupby("color_architecture", observed=True)["price_per_m2"]
                .median().reset_index())
-    m2_data.columns = ["Technology", "Avg $/m\u00b2"]
-    wled_baseline = m2_data.loc[m2_data["Technology"] == "WLED", "Avg $/m\u00b2"]
+    m2_data.columns = ["Technology", "Median $/m\u00b2"]
+    wled_baseline = m2_data.loc[m2_data["Technology"] == "WLED", "Median $/m\u00b2"]
     wled_val = float(wled_baseline.iloc[0]) if len(wled_baseline) > 0 else None
 
-    fig = px.bar(m2_data, x="Technology", y="Avg $/m\u00b2", color="Technology",
-                 color_discrete_map=TECH_COLORS, text="Avg $/m\u00b2",
+    fig = px.bar(m2_data, x="Technology", y="Median $/m\u00b2", color="Technology",
+                 color_discrete_map=TECH_COLORS, text="Median $/m\u00b2",
                  category_orders={"Technology": TECH_ORDER})
     fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside",
                       textfont_size=14, textfont_weight=600, cliponaxis=False)
@@ -1144,7 +1144,7 @@ elif page == "Price Analyzer":
     st.plotly_chart(fig, use_container_width=True)
 
     # Premium metrics row
-    m2_col = "Avg $/m\u00b2"
+    m2_col = "Median $/m\u00b2"
     if wled_val and wled_val > 0:
         techs_with_m2 = m2_data[m2_data["Technology"] != "WLED"].sort_values(m2_col)
         mcols = st.columns(len(techs_with_m2))
@@ -1285,7 +1285,7 @@ elif page == "Price Analyzer":
             st.dataframe(pd.DataFrame(best_per_tech), use_container_width=True, hide_index=True)
 
     with tab4:
-        st.subheader("Average $/m\u00b2 by Technology Over Time")
+        st.subheader("Median $/m\u00b2 by Technology Over Time")
 
         # Screen area lookup (diagonal inches → m²) for $/m² from price history
         _SCREEN_AREA_M2 = {
@@ -1308,12 +1308,20 @@ elif page == "Price Analyzer":
                 hist_filtered["price_per_m2"] = hist_filtered["best_price"] / hist_filtered["screen_area_m2"]
                 hist_m2 = hist_filtered.dropna(subset=["price_per_m2"])
 
-                # Aggregate to ISO weeks — average $/m² within the same week
+                # Aggregate to ISO weeks using per-product median $/m² methodology:
+                # 1. For each (week, product), take median $/m² across all sizes
+                # 2. For each (week, technology), take median across products
+                # This matches the hero bar chart methodology and avoids
+                # large-size SKUs skewing the average.
                 hist_m2["iso_year"] = hist_m2["snapshot_date"].dt.isocalendar().year.astype(int)
                 hist_m2["iso_week"] = hist_m2["snapshot_date"].dt.isocalendar().week.astype(int)
+                prod_weekly = (
+                    hist_m2.groupby(["iso_year", "iso_week", "product_id", "color_architecture"])["price_per_m2"]
+                    .median().reset_index()
+                )
                 weekly = (
-                    hist_m2.groupby(["iso_year", "iso_week", "color_architecture"])["price_per_m2"]
-                    .mean().reset_index()
+                    prod_weekly.groupby(["iso_year", "iso_week", "color_architecture"])["price_per_m2"]
+                    .median().reset_index()
                 )
 
                 # Build a sortable week key and a display label
@@ -1326,15 +1334,15 @@ elif page == "Price Analyzer":
                     weekly["_sort"] = weekly["iso_year"] * 100 + weekly["iso_week"]
                 weekly = weekly.sort_values("_sort")
                 weekly.rename(columns={"color_architecture": "Technology",
-                                       "price_per_m2": "Avg $/m\u00b2"}, inplace=True)
+                                       "price_per_m2": "Median $/m\u00b2"}, inplace=True)
 
                 n_weeks = weekly["Week"].nunique()
 
                 fig = px.line(
-                    weekly, x="Week", y="Avg $/m\u00b2",
+                    weekly, x="Week", y="Median $/m\u00b2",
                     color="Technology", color_discrete_map=TECH_COLORS,
                     markers=True,
-                    labels={"Avg $/m\u00b2": "Average $/m\u00b2", "Week": ""},
+                    labels={"Median $/m\u00b2": "Median $/m\u00b2", "Week": ""},
                     category_orders={"Week": weekly["Week"].unique().tolist(),
                                      "Technology": TECH_ORDER},
                 )
@@ -1358,7 +1366,7 @@ elif page == "Price Analyzer":
                         hist_sized = hist_m2[hist_m2["size_inches"] == size_val]
                         weekly2 = (
                             hist_sized.groupby(["iso_year", "iso_week", "color_architecture"])["price_per_m2"]
-                            .mean().reset_index()
+                            .median().reset_index()
                         )
                         if n_years <= 1:
                             weekly2["Week"] = "Wk " + weekly2["iso_week"].astype(str)
@@ -1368,12 +1376,12 @@ elif page == "Price Analyzer":
                             weekly2["_sort"] = weekly2["iso_year"] * 100 + weekly2["iso_week"]
                         weekly2 = weekly2.sort_values("_sort")
                         weekly2.rename(columns={"color_architecture": "Technology",
-                                                "price_per_m2": "Avg $/m\u00b2"}, inplace=True)
+                                                "price_per_m2": "Median $/m\u00b2"}, inplace=True)
                         fig2 = px.line(
-                            weekly2, x="Week", y="Avg $/m\u00b2",
+                            weekly2, x="Week", y="Median $/m\u00b2",
                             color="Technology", color_discrete_map=TECH_COLORS,
                             markers=True,
-                            labels={"Avg $/m\u00b2": f'Average $/m\u00b2 \u2014 {size_filter}', "Week": ""},
+                            labels={"Median $/m\u00b2": f'Median $/m\u00b2 \u2014 {size_filter}', "Week": ""},
                             category_orders={"Week": weekly2["Week"].unique().tolist(),
                                              "Technology": TECH_ORDER},
                         )
@@ -1642,7 +1650,7 @@ elif page == "Temporal Analysis":
                 },
                 labels={
                     "year_str": "Model Year",
-                    "avg_price_m2": "Avg $/m\u00b2",
+                    "avg_price_m2": "Median $/m\u00b2",
                     "color_architecture": "Technology",
                     "n": "Sample Size",
                 },
@@ -1721,13 +1729,13 @@ elif page == "Temporal Analysis":
                                 pct = (c_m2 - p_m2) / p_m2 * 100
                                 m2_delta = f"{pct:+.0f}%"
                             st.metric(
-                                "Avg $/m\u00b2",
+                                "Median $/m\u00b2",
                                 f"${c_m2:,.0f}",
                                 delta=m2_delta,
                                 delta_color="inverse",
                             )
                         else:
-                            st.metric("Avg $/m\u00b2", "N/A")
+                            st.metric("Median $/m\u00b2", "N/A")
                     with cols[2]:
                         if pd.notna(c_m2) and c_score > 0:
                             val = c_m2 / c_score
