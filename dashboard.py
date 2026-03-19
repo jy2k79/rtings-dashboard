@@ -234,7 +234,7 @@ prices_df = load_size_prices()
 history_df = load_price_history()
 
 # Screen area lookup for $/m² calculations (shared with pricing_pipeline.py)
-_SCREEN_AREA_M2_GLOBAL_GLOBAL = {
+_SCREEN_AREA_M2_GLOBAL = {
     32: 0.22, 40: 0.34, 42: 0.38, 43: 0.40, 48: 0.50,
     50: 0.54, 55: 0.65, 58: 0.72, 60: 0.77, 65: 0.91,
     70: 1.06, 75: 1.21, 77: 1.28, 80: 1.38, 83: 1.49,
@@ -242,23 +242,65 @@ _SCREEN_AREA_M2_GLOBAL_GLOBAL = {
 }
 
 
-def compute_m2_from_history(hist: pd.DataFrame, product_ids: set | None = None) -> dict:
-    """Compute per-product median $/m² from the latest price_history snapshot.
+def enrich_history(hist: pd.DataFrame) -> pd.DataFrame:
+    """Add $/m² and time columns to price_history data. Call once at load time."""
+    if len(hist) == 0:
+        return hist
+    h = hist.copy()
+    h["screen_area_m2"] = h["size_inches"].map(_SCREEN_AREA_M2_GLOBAL)
+    h["price_per_m2"] = h["best_price"] / h["screen_area_m2"]
+    h["year"] = h["snapshot_date"].dt.year
+    h["month"] = h["snapshot_date"].dt.to_period("M").astype(str)
+    h["quarter"] = h["snapshot_date"].dt.to_period("Q").astype(str)
+    h["iso_year"] = h["snapshot_date"].dt.isocalendar().year.astype(int)
+    h["iso_week"] = h["snapshot_date"].dt.isocalendar().week.astype(int)
+    return h
 
-    Returns dict of product_id (str) → median $/m².
+
+def compute_m2_from_history(hist: pd.DataFrame, product_ids: set | None = None,
+                            snapshot: str = "latest") -> dict:
+    """Compute per-product median $/m² from price_history.
+
+    Args:
+        hist: enriched price_history DataFrame (must have price_per_m2 column)
+        product_ids: optional set of product_id strings to include
+        snapshot: time window to aggregate over —
+            "latest"  = most recent snapshot only (default, for bar charts)
+            "ytd"     = year-to-date
+            "all"     = all available history
+            or a period string like "2026Q1", "2026-03" for quarter/month
+
+    Returns dict of product_id → median $/m².
     This is the single source of truth for all $/m² displays.
     """
     if len(hist) == 0:
         return {}
-    latest = hist["snapshot_date"].max()
-    snap = hist[hist["snapshot_date"] == latest].copy()
-    if product_ids is not None:
-        snap = snap[snap["product_id"].astype(str).isin(product_ids)]
-    snap["screen_area_m2"] = snap["size_inches"].map(_SCREEN_AREA_M2_GLOBAL_GLOBAL)
-    snap["_m2"] = snap["best_price"] / snap["screen_area_m2"]
-    snap = snap.dropna(subset=["_m2"])
-    return snap.groupby("product_id")["_m2"].median().to_dict()
 
+    h = hist.dropna(subset=["price_per_m2"]).copy()
+
+    if snapshot == "latest":
+        h = h[h["snapshot_date"] == h["snapshot_date"].max()]
+    elif snapshot == "ytd":
+        current_year = h["snapshot_date"].max().year
+        h = h[h["year"] == current_year]
+    elif snapshot != "all":
+        # Try quarter (e.g. "2026Q1") or month (e.g. "2026-03")
+        if "Q" in str(snapshot):
+            h = h[h["quarter"] == snapshot]
+        else:
+            h = h[h["month"] == snapshot]
+
+    if product_ids is not None:
+        h = h[h["product_id"].astype(str).isin(product_ids)]
+
+    if len(h) == 0:
+        return {}
+
+    return h.groupby("product_id")["price_per_m2"].median().to_dict()
+
+
+# Enrich history with $/m² and time columns (once at load time)
+history_df = enrich_history(history_df)
 
 # Overwrite price_per_m2 on the main dataframe with values derived from
 # price_history.csv so that bar charts, metrics, and trend lines all use
@@ -1337,18 +1379,11 @@ elif page == "Price Analyzer":
             if len(hist_filtered) == 0:
                 st.info("No price history for selected technologies.")
             else:
-                # Compute $/m² from size_inches and best_price
-                hist_filtered["screen_area_m2"] = hist_filtered["size_inches"].map(_SCREEN_AREA_M2_GLOBAL)
-                hist_filtered["price_per_m2"] = hist_filtered["best_price"] / hist_filtered["screen_area_m2"]
+                # history_df is pre-enriched with price_per_m2, iso_year, iso_week
                 hist_m2 = hist_filtered.dropna(subset=["price_per_m2"])
 
-                # Aggregate to ISO weeks using per-product median $/m² methodology:
-                # 1. For each (week, product), take median $/m² across all sizes
-                # 2. For each (week, technology), take median across products
-                # This matches the hero bar chart methodology and avoids
-                # large-size SKUs skewing the average.
-                hist_m2["iso_year"] = hist_m2["snapshot_date"].dt.isocalendar().year.astype(int)
-                hist_m2["iso_week"] = hist_m2["snapshot_date"].dt.isocalendar().week.astype(int)
+                # Per-product median $/m² per week, then per-tech median
+                # (same methodology as bar chart — single source of truth)
                 prod_weekly = (
                     hist_m2.groupby(["iso_year", "iso_week", "product_id", "color_architecture"])["price_per_m2"]
                     .median().reset_index()
