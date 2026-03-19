@@ -1422,6 +1422,13 @@ elif page == "Price Analyzer":
                 # history_df is pre-enriched with price_per_m2, iso_year, iso_week
                 hist_m2 = hist_filtered.dropna(subset=["price_per_m2"])
 
+                # Use only the latest snapshot per week (avoid mixing partial
+                # mid-week reruns with the full weekly run)
+                latest_per_wk = (hist_m2.groupby(["iso_year", "iso_week"])["snapshot_date"]
+                                 .max().reset_index(name="_latest"))
+                hist_m2 = hist_m2.merge(latest_per_wk, on=["iso_year", "iso_week"])
+                hist_m2 = hist_m2[hist_m2["snapshot_date"] == hist_m2["_latest"]].drop(columns=["_latest"])
+
                 # Per-product median $/m² per week, then per-tech median
                 # (same methodology as bar chart — single source of truth)
                 prod_weekly = (
