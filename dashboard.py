@@ -1299,7 +1299,13 @@ elif page == "Price Analyzer":
             st.info("No price history available yet. Run the pricing pipeline "
                     "(ideally every Monday) to accumulate weekly data.")
         else:
-            hist_filtered = history_df[history_df["color_architecture"].isin(selected_techs)].copy()
+            # Apply same filters as the rest of the dashboard (sidebar + 8K exclusion)
+            # so trends chart matches the hero bar chart
+            filtered_pids = set(fdf["product_id"].astype(str))
+            hist_filtered = history_df[
+                history_df["color_architecture"].isin(selected_techs)
+                & history_df["product_id"].astype(str).isin(filtered_pids)
+            ].copy()
             if len(hist_filtered) == 0:
                 st.info("No price history for selected technologies.")
             else:
