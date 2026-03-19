@@ -1459,8 +1459,14 @@ elif page == "Price Analyzer":
             st.info("No price history available yet. Run the pricing pipeline "
                     "(ideally every Monday) to accumulate weekly data.")
         else:
+            # Time granularity selector
+            granularity = st.selectbox(
+                "Time granularity",
+                ["Weekly", "Monthly", "Quarterly", "YTD"],
+                key="price_trend_granularity",
+            )
+
             # Apply same filters as the rest of the dashboard (sidebar + 8K exclusion)
-            # so trends chart matches the hero bar chart
             filtered_pids = set(fdf["product_id"].astype(str))
             hist_filtered = history_df[
                 history_df["color_architecture"].isin(selected_techs)
@@ -1469,54 +1475,73 @@ elif page == "Price Analyzer":
             if len(hist_filtered) == 0:
                 st.info("No price history for selected technologies.")
             else:
-                # history_df is pre-enriched with price_per_m2, iso_year, iso_week
+                # history_df is pre-enriched with price_per_m2, iso_year, iso_week, month, quarter
                 hist_m2 = hist_filtered.dropna(subset=["price_per_m2"])
 
-                # Use only the latest snapshot per week (avoid mixing partial
-                # mid-week reruns with the full weekly run)
+                # Use only the latest snapshot per week
                 latest_per_wk = (hist_m2.groupby(["iso_year", "iso_week"])["snapshot_date"]
                                  .max().reset_index(name="_latest"))
                 hist_m2 = hist_m2.merge(latest_per_wk, on=["iso_year", "iso_week"])
                 hist_m2 = hist_m2[hist_m2["snapshot_date"] == hist_m2["_latest"]].drop(columns=["_latest"])
 
-                # Per-product median $/m² per week, then per-tech median
-                # (same methodology as bar chart — single source of truth)
-                prod_weekly = (
-                    hist_m2.groupby(["iso_year", "iso_week", "product_id", "color_architecture"])["price_per_m2"]
+                # Set groupby keys based on granularity
+                if granularity == "Weekly":
+                    time_cols = ["iso_year", "iso_week"]
+                elif granularity == "Monthly":
+                    time_cols = ["month"]
+                elif granularity == "Quarterly":
+                    time_cols = ["quarter"]
+                else:  # YTD
+                    time_cols = ["year"]
+
+                # Per-product median $/m², then per-tech median per period
+                prod_agg = (
+                    hist_m2.groupby(time_cols + ["product_id", "color_architecture"])["price_per_m2"]
                     .median().reset_index()
                 )
-                weekly = (
-                    prod_weekly.groupby(["iso_year", "iso_week", "color_architecture"])["price_per_m2"]
+                period_agg = (
+                    prod_agg.groupby(time_cols + ["color_architecture"])["price_per_m2"]
                     .median().reset_index()
                 )
 
-                # Build a sortable week key and a display label
-                n_years = weekly["iso_year"].nunique()
-                if n_years <= 1:
-                    weekly["Week"] = "Wk " + weekly["iso_week"].astype(str)
-                    weekly["_sort"] = weekly["iso_week"]
-                else:
-                    weekly["Week"] = weekly["iso_year"].astype(str) + " Wk " + weekly["iso_week"].astype(str)
-                    weekly["_sort"] = weekly["iso_year"] * 100 + weekly["iso_week"]
-                weekly = weekly.sort_values("_sort")
-                weekly.rename(columns={"color_architecture": "Technology",
-                                       "price_per_m2": "Median $/m\u00b2"}, inplace=True)
+                # Build sortable period label
+                if granularity == "Weekly":
+                    n_years = period_agg["iso_year"].nunique()
+                    if n_years <= 1:
+                        period_agg["Period"] = "Wk " + period_agg["iso_week"].astype(str)
+                        period_agg["_sort"] = period_agg["iso_week"]
+                    else:
+                        period_agg["Period"] = period_agg["iso_year"].astype(str) + " Wk " + period_agg["iso_week"].astype(str)
+                        period_agg["_sort"] = period_agg["iso_year"] * 100 + period_agg["iso_week"]
+                elif granularity == "Monthly":
+                    period_agg["Period"] = period_agg["month"]
+                    period_agg["_sort"] = period_agg["month"]
+                elif granularity == "Quarterly":
+                    period_agg["Period"] = period_agg["quarter"]
+                    period_agg["_sort"] = period_agg["quarter"]
+                else:  # YTD
+                    period_agg["Period"] = period_agg["year"].astype(str)
+                    period_agg["_sort"] = period_agg["year"]
 
-                n_weeks = weekly["Week"].nunique()
+                period_agg = period_agg.sort_values("_sort")
+                period_agg.rename(columns={"color_architecture": "Technology",
+                                           "price_per_m2": "Median $/m\u00b2"}, inplace=True)
+
+                n_periods = period_agg["Period"].nunique()
 
                 fig = px.line(
-                    weekly, x="Week", y="Median $/m\u00b2",
+                    period_agg, x="Period", y="Median $/m\u00b2",
                     color="Technology", color_discrete_map=TECH_COLORS,
                     markers=True,
-                    labels={"Median $/m\u00b2": "Median $/m\u00b2", "Week": ""},
-                    category_orders={"Week": weekly["Week"].unique().tolist(),
+                    labels={"Median $/m\u00b2": "Median $/m\u00b2", "Period": ""},
+                    category_orders={"Period": period_agg["Period"].unique().tolist(),
                                      "Technology": TECH_ORDER},
                 )
                 fig.update_traces(marker=dict(size=10))
                 fig.update_layout(height=500, legend_title_text="Technology",
                                   xaxis=dict(type="category"), **PL)
-                if n_weeks == 1:
-                    st.caption("Only one week of data. Run the pipeline each Monday to see trends.")
+                if n_periods == 1:
+                    st.caption(f"Only one {granularity.lower()} period of data.")
                 st.plotly_chart(fig, use_container_width=True)
 
                 # Optional size filter for a second chart
@@ -1530,25 +1555,36 @@ elif page == "Price Analyzer":
                     if size_filter != "All sizes":
                         size_val = int(size_filter.replace('"', ''))
                         hist_sized = hist_m2[hist_m2["size_inches"] == size_val]
-                        weekly2 = (
-                            hist_sized.groupby(["iso_year", "iso_week", "color_architecture"])["price_per_m2"]
+                        sized_agg = (
+                            hist_sized.groupby(time_cols + ["color_architecture"])["price_per_m2"]
                             .median().reset_index()
                         )
-                        if n_years <= 1:
-                            weekly2["Week"] = "Wk " + weekly2["iso_week"].astype(str)
-                            weekly2["_sort"] = weekly2["iso_week"]
+                        # Reuse same period labeling logic
+                        if granularity == "Weekly":
+                            if sized_agg["iso_year"].nunique() <= 1:
+                                sized_agg["Period"] = "Wk " + sized_agg["iso_week"].astype(str)
+                                sized_agg["_sort"] = sized_agg["iso_week"]
+                            else:
+                                sized_agg["Period"] = sized_agg["iso_year"].astype(str) + " Wk " + sized_agg["iso_week"].astype(str)
+                                sized_agg["_sort"] = sized_agg["iso_year"] * 100 + sized_agg["iso_week"]
+                        elif granularity == "Monthly":
+                            sized_agg["Period"] = sized_agg["month"]
+                            sized_agg["_sort"] = sized_agg["month"]
+                        elif granularity == "Quarterly":
+                            sized_agg["Period"] = sized_agg["quarter"]
+                            sized_agg["_sort"] = sized_agg["quarter"]
                         else:
-                            weekly2["Week"] = weekly2["iso_year"].astype(str) + " Wk " + weekly2["iso_week"].astype(str)
-                            weekly2["_sort"] = weekly2["iso_year"] * 100 + weekly2["iso_week"]
-                        weekly2 = weekly2.sort_values("_sort")
-                        weekly2.rename(columns={"color_architecture": "Technology",
-                                                "price_per_m2": "Median $/m\u00b2"}, inplace=True)
+                            sized_agg["Period"] = sized_agg["year"].astype(str)
+                            sized_agg["_sort"] = sized_agg["year"]
+                        sized_agg = sized_agg.sort_values("_sort")
+                        sized_agg.rename(columns={"color_architecture": "Technology",
+                                                  "price_per_m2": "Median $/m\u00b2"}, inplace=True)
                         fig2 = px.line(
-                            weekly2, x="Week", y="Median $/m\u00b2",
+                            sized_agg, x="Period", y="Median $/m\u00b2",
                             color="Technology", color_discrete_map=TECH_COLORS,
                             markers=True,
-                            labels={"Median $/m\u00b2": f'Median $/m\u00b2 \u2014 {size_filter}', "Week": ""},
-                            category_orders={"Week": weekly2["Week"].unique().tolist(),
+                            labels={"Median $/m\u00b2": f'Median $/m\u00b2 \u2014 {size_filter}', "Period": ""},
+                            category_orders={"Period": sized_agg["Period"].unique().tolist(),
                                              "Technology": TECH_ORDER},
                         )
                         fig2.update_traces(marker=dict(size=10))
