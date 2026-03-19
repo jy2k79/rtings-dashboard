@@ -285,7 +285,8 @@ def enrich_history(hist: pd.DataFrame, main_df: pd.DataFrame | None = None) -> p
         _tech_map = dict(zip(main_df["product_id"].astype(str), main_df["color_architecture"]))
         woled_mask = h.apply(lambda r: _is_samsung_woled_row(r, _name_map, _tech_map), axis=1)
         global _n_woled_excluded
-        _n_woled_excluded = woled_mask.sum()
+        # Count unique (product_id, size) combos, not total history rows
+        _n_woled_excluded = h[woled_mask].groupby(["product_id", "size_inches"]).ngroups
         h = h[~woled_mask]
 
     return h
