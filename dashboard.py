@@ -233,6 +233,42 @@ df = load_data()
 prices_df = load_size_prices()
 history_df = load_price_history()
 
+# Screen area lookup for $/m² calculations (shared with pricing_pipeline.py)
+_SCREEN_AREA_M2_GLOBAL_GLOBAL = {
+    32: 0.22, 40: 0.34, 42: 0.38, 43: 0.40, 48: 0.50,
+    50: 0.54, 55: 0.65, 58: 0.72, 60: 0.77, 65: 0.91,
+    70: 1.06, 75: 1.21, 77: 1.28, 80: 1.38, 83: 1.49,
+    85: 1.56, 86: 1.59, 98: 2.07, 100: 2.15,
+}
+
+
+def compute_m2_from_history(hist: pd.DataFrame, product_ids: set | None = None) -> dict:
+    """Compute per-product median $/m² from the latest price_history snapshot.
+
+    Returns dict of product_id (str) → median $/m².
+    This is the single source of truth for all $/m² displays.
+    """
+    if len(hist) == 0:
+        return {}
+    latest = hist["snapshot_date"].max()
+    snap = hist[hist["snapshot_date"] == latest].copy()
+    if product_ids is not None:
+        snap = snap[snap["product_id"].astype(str).isin(product_ids)]
+    snap["screen_area_m2"] = snap["size_inches"].map(_SCREEN_AREA_M2_GLOBAL_GLOBAL)
+    snap["_m2"] = snap["best_price"] / snap["screen_area_m2"]
+    snap = snap.dropna(subset=["_m2"])
+    return snap.groupby("product_id")["_m2"].median().to_dict()
+
+
+# Overwrite price_per_m2 on the main dataframe with values derived from
+# price_history.csv so that bar charts, metrics, and trend lines all use
+# the exact same data source and methodology.
+if len(history_df) > 0:
+    _m2_map = compute_m2_from_history(history_df)
+    df["price_per_m2"] = df["product_id"].map(
+        lambda pid: _m2_map.get(pid) or _m2_map.get(str(pid))
+    )
+
 # Exclude 8K TVs globally — tiny market segment that skews scores and pricing
 _n_8k = 0
 if "resolution" in df.columns:
@@ -1287,14 +1323,6 @@ elif page == "Price Analyzer":
     with tab4:
         st.subheader("Median $/m\u00b2 by Technology Over Time")
 
-        # Screen area lookup (diagonal inches → m²) for $/m² from price history
-        _SCREEN_AREA_M2 = {
-            32: 0.22, 40: 0.34, 42: 0.38, 43: 0.40, 48: 0.50,
-            50: 0.54, 55: 0.65, 58: 0.72, 60: 0.77, 65: 0.91,
-            70: 1.06, 75: 1.21, 77: 1.28, 80: 1.38, 83: 1.49,
-            85: 1.56, 86: 1.59, 98: 2.07, 100: 2.15,
-        }
-
         if len(history_df) == 0:
             st.info("No price history available yet. Run the pricing pipeline "
                     "(ideally every Monday) to accumulate weekly data.")
@@ -1310,7 +1338,7 @@ elif page == "Price Analyzer":
                 st.info("No price history for selected technologies.")
             else:
                 # Compute $/m² from size_inches and best_price
-                hist_filtered["screen_area_m2"] = hist_filtered["size_inches"].map(_SCREEN_AREA_M2)
+                hist_filtered["screen_area_m2"] = hist_filtered["size_inches"].map(_SCREEN_AREA_M2_GLOBAL)
                 hist_filtered["price_per_m2"] = hist_filtered["best_price"] / hist_filtered["screen_area_m2"]
                 hist_m2 = hist_filtered.dropna(subset=["price_per_m2"])
 
