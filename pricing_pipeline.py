@@ -67,6 +67,28 @@ SCREEN_AREA_M2 = {
     85: 1.56, 86: 1.59, 98: 2.07, 100: 2.15,
 }
 
+# Samsung OLED sizes that use LG WOLED panels instead of QD-OLED.
+# These should be excluded from QD-OLED pricing to avoid contamination.
+# Samsung doesn't make QD-OLED panels in 42", 48", or 83".
+# S85F 77" is also WOLED (confirmed via EXZA model suffix).
+SAMSUNG_WOLED_SIZES = {
+    # (name_substring, size) → True means this size is WOLED
+    "S90": {42, 48, 83},
+    "S95": {83},
+    "S85": {77, 83},
+}
+
+
+def is_samsung_woled_sku(fullname: str, color_arch: str, size: int | None) -> bool:
+    """Return True if this SKU is a Samsung OLED size that uses a WOLED panel
+    despite the product being classified as QD-OLED."""
+    if color_arch != "QD-OLED" or not size or "Samsung" not in fullname:
+        return False
+    for model_substr, woled_sizes in SAMSUNG_WOLED_SIZES.items():
+        if model_substr in fullname and size in woled_sizes:
+            return True
+    return False
+
 
 # ============================================================================
 # STEP 1: Extract ASINs and Best Buy SKUs from RTINGS
@@ -526,10 +548,23 @@ def merge_pricing(retailer_df, keepa_df, bestbuy_df):
                     break
 
     # Build per-size pricing table
+    # Lookup maps for WOLED exclusion
+    name_map = dict(zip(tv_db['product_id'].astype(str), tv_db['fullname']))
+    tech_map = dict(zip(tv_db['product_id'].astype(str), tv_db['color_architecture']))
+    n_woled_excluded = 0
+
     price_rows = []
     for _, row in retailer_df.iterrows():
         size = row.get('size_inches')
         pid = str(row['product_id'])
+
+        # Exclude Samsung WOLED-panel sizes from QD-OLED pricing
+        fullname = name_map.get(pid, '')
+        color_arch = tech_map.get(pid, '')
+        size_int = int(size) if pd.notna(size) else None
+        if is_samsung_woled_sku(fullname, color_arch, size_int):
+            n_woled_excluded += 1
+            continue
 
         # Skip out-of-stock items
         avail = str(row.get('availability', ''))
@@ -586,6 +621,8 @@ def merge_pricing(retailer_df, keepa_df, bestbuy_df):
         })
 
     prices_df = pd.DataFrame(price_rows)
+    if n_woled_excluded > 0:
+        print(f"  Excluded {n_woled_excluded} Samsung WOLED-panel SKUs from QD-OLED pricing")
 
     # Save detailed price table
     prices_out = DATA_DIR / "tv_prices.csv"

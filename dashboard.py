@@ -242,8 +242,32 @@ _SCREEN_AREA_M2_GLOBAL = {
 }
 
 
-def enrich_history(hist: pd.DataFrame) -> pd.DataFrame:
-    """Add $/m² and time columns to price_history data. Call once at load time."""
+# Samsung OLED sizes that use WOLED panels despite QD-OLED classification.
+# Excluded from QD-OLED pricing (Samsung doesn't make QD-OLED at 42/48/83").
+_SAMSUNG_WOLED_SIZES = {"S90": {42, 48, 83}, "S95": {83}, "S85": {77, 83}}
+
+
+def _is_samsung_woled_row(row, name_map: dict, tech_map: dict) -> bool:
+    """Check if a price_history row is a Samsung WOLED-panel SKU."""
+    pid = str(row.get("product_id", ""))
+    tech = tech_map.get(pid, "")
+    if tech != "QD-OLED":
+        return False
+    name = name_map.get(pid, "")
+    if "Samsung" not in name:
+        return False
+    size = int(row["size_inches"]) if pd.notna(row.get("size_inches")) else 0
+    for model, sizes in _SAMSUNG_WOLED_SIZES.items():
+        if model in name and size in sizes:
+            return True
+    return False
+
+
+def enrich_history(hist: pd.DataFrame, main_df: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Add $/m² and time columns to price_history data. Call once at load time.
+
+    Excludes Samsung WOLED-panel SKUs from QD-OLED products if main_df is provided.
+    """
     if len(hist) == 0:
         return hist
     h = hist.copy()
@@ -254,7 +278,19 @@ def enrich_history(hist: pd.DataFrame) -> pd.DataFrame:
     h["quarter"] = h["snapshot_date"].dt.to_period("Q").astype(str)
     h["iso_year"] = h["snapshot_date"].dt.isocalendar().year.astype(int)
     h["iso_week"] = h["snapshot_date"].dt.isocalendar().week.astype(int)
+
+    # Exclude Samsung WOLED-panel sizes from QD-OLED pricing
+    if main_df is not None and len(main_df) > 0:
+        _name_map = dict(zip(main_df["product_id"].astype(str), main_df["fullname"]))
+        _tech_map = dict(zip(main_df["product_id"].astype(str), main_df["color_architecture"]))
+        woled_mask = h.apply(lambda r: _is_samsung_woled_row(r, _name_map, _tech_map), axis=1)
+        global _n_woled_excluded
+        _n_woled_excluded = woled_mask.sum()
+        h = h[~woled_mask]
+
     return h
+
+_n_woled_excluded = 0
 
 
 def compute_m2_from_history(hist: pd.DataFrame, product_ids: set | None = None,
@@ -300,7 +336,8 @@ def compute_m2_from_history(hist: pd.DataFrame, product_ids: set | None = None,
 
 
 # Enrich history with $/m² and time columns (once at load time)
-history_df = enrich_history(history_df)
+# Pass df so Samsung WOLED-panel sizes are excluded from QD-OLED pricing
+history_df = enrich_history(history_df, main_df=df)
 
 # Overwrite price_per_m2 on the main dataframe with values derived from
 # price_history.csv so that bar charts, metrics, and trend lines all use
@@ -516,7 +553,10 @@ else:
     temporal_mask = temporal_mask & df["price_best"].between(price_range[0], price_range[1])
 tdf = df[temporal_mask].copy()
 if _n_8k > 0:
-    st.sidebar.caption(f"{_n_8k} 8K sets excluded from all metrics")
+    caveats = [f"{_n_8k} 8K sets excluded from all metrics"]
+    if _n_woled_excluded > 0:
+        caveats.append(f"{_n_woled_excluded} Samsung WOLED-panel SKUs excluded from QD-OLED pricing")
+    st.sidebar.caption(" · ".join(caveats))
 
 # Support deep-linking via ?page=...
 ALL_PAGES = ["Overview", "Technology Explorer", "Price Analyzer", "Temporal Analysis", "Comparison Tool", "TV Profiles"]
