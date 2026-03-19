@@ -1342,7 +1342,56 @@ elif page == "Price Analyzer":
             fig.update_traces(marker=dict(size=8))
             st.plotly_chart(fig, use_container_width=True)
 
+        # Per-size $/m² comparison by technology
+        st.divider()
+        st.subheader("$/m² by Screen Size and Technology")
+        st.caption("Median price per m² at each screen size, broken down by technology. "
+                   "Shows whether the cost gap between technologies holds across all sizes.")
+        if len(history_df) > 0:
+            # Use latest snapshot from price_history (already enriched)
+            latest_snap = history_df["snapshot_date"].max()
+            snap = history_df[history_df["snapshot_date"] == latest_snap].copy()
+            # Apply sidebar filters
+            snap = snap[snap["product_id"].astype(str).isin(set(fdf["product_id"].astype(str)))]
+            snap = snap.dropna(subset=["price_per_m2", "size_inches"])
+            snap["size"] = snap["size_inches"].astype(int)
+
+            if len(snap) > 0:
+                # Only show sizes with data from 2+ technologies
+                common_sizes = [43, 50, 55, 65, 75, 85, 98]
+                snap_common = snap[snap["size"].isin(common_sizes)]
+
+                size_tech = (snap_common.groupby(["size", "color_architecture"])["price_per_m2"]
+                             .median().reset_index())
+                size_tech.columns = ["Size", "Technology", "Median $/m\u00b2"]
+                size_tech["Size"] = size_tech["Size"].astype(str) + '"'
+
+                fig = px.bar(size_tech, x="Size", y="Median $/m\u00b2",
+                             color="Technology", color_discrete_map=TECH_COLORS,
+                             barmode="group",
+                             category_orders={
+                                 "Technology": TECH_ORDER,
+                                 "Size": [f'{s}"' for s in common_sizes],
+                             },
+                             text="Median $/m\u00b2")
+                fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside",
+                                  textfont_size=10, cliponaxis=False)
+                fig.update_layout(height=500, legend_title_text="Technology", **PL)
+                st.plotly_chart(fig, use_container_width=True)
+
+                # Also show the raw data table
+                pivot = size_tech.pivot(index="Technology", columns="Size", values="Median $/m\u00b2")
+                pivot = pivot.reindex([t for t in TECH_ORDER if t in pivot.index])
+                pivot = pivot[[f'{s}"' for s in common_sizes if f'{s}"' in pivot.columns]]
+                st.dataframe(
+                    pivot.style.format("${:,.0f}", na_rep="—"),
+                    use_container_width=True,
+                )
+        else:
+            st.info("No price history available for per-size breakdown.")
+
         if len(prices_df) > 0:
+            st.divider()
             st.subheader("Price by Screen Size")
             sized = prices_df[prices_df["best_price"].notna() & prices_df["size_inches"].notna()].copy()
             if len(sized) > 0:
