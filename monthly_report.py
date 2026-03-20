@@ -277,8 +277,8 @@ def _per_product_median_m2(hist, db):
     snap = h[h["snapshot_date"] == latest]
 
     # Per-product median, then per-tech median
-    prod_med = snap.groupby(["product_id", "color_architecture"])["price_per_m2"].median().reset_index()
-    return dict(prod_med.groupby("color_architecture")["price_per_m2"].median())
+    prod_med = snap.groupby(["product_id", "color_architecture"])["price_per_m2"].mean().reset_index()
+    return dict(prod_med.groupby("color_architecture")["price_per_m2"].mean())
 
 
 def compute_pricing_metrics(db, price_history):
@@ -297,7 +297,7 @@ def compute_pricing_metrics(db, price_history):
     for tech in TECH_ORDER:
         subset = priced[priced["color_architecture"] == tech]
         if len(subset) > 0:
-            median_price[tech] = round(float(subset["price_best"].median()), 0)
+            median_price[tech] = round(float(subset["price_best"].mean()), 0)
 
     # QD premium over WLED baseline
     wled_m2 = price_per_m2.get("WLED")
@@ -340,8 +340,8 @@ def compute_pricing_metrics(db, price_history):
             for tech in TECH_ORDER:
                 curr_snap = h[(h["snapshot_date"] == latest) & (h["color_architecture"] == tech)]
                 prev_snap = h[(h["snapshot_date"] == previous) & (h["color_architecture"] == tech)]
-                curr_med = curr_snap.groupby("product_id")["price_per_m2"].median().median()
-                prev_med = prev_snap.groupby("product_id")["price_per_m2"].median().median()
+                curr_med = curr_snap.groupby("product_id")["price_per_m2"].mean().mean()
+                prev_med = prev_snap.groupby("product_id")["price_per_m2"].mean().mean()
                 if pd.notna(curr_med) and pd.notna(prev_med) and prev_med > 0:
                     trends[tech] = {
                         "current_m2": round(float(curr_med), 0),
@@ -406,7 +406,7 @@ def compute_temporal_metrics(db):
         p_m2 = prev["price_per_m2"].dropna()
         c_m2 = curr["price_per_m2"].dropna()
         if len(p_m2) > 0 and len(c_m2) > 0:
-            pm, cm = float(p_m2.median()), float(c_m2.median())
+            pm, cm = float(p_m2.mean()), float(c_m2.mean())
             entry["price_m2_prev"] = round(pm, 0)
             entry["price_m2_curr"] = round(cm, 0)
             entry["price_m2_delta_pct"] = round((cm - pm) / pm * 100, 1) if pm > 0 else None

@@ -340,7 +340,7 @@ def compute_m2_from_history(hist: pd.DataFrame, product_ids: set | None = None,
     if len(h) == 0:
         return {}
 
-    return h.groupby("product_id")["price_per_m2"].median().to_dict()
+    return h.groupby("product_id")["price_per_m2"].mean().to_dict()
 
 
 # Enrich history with $/m² and time columns (once at load time)
@@ -587,7 +587,7 @@ if page == "Overview":
     c2.metric("With Pricing", len(priced))
     c3.metric("Brands", fdf["brand"].nunique())
     c4.metric("Avg Price", f"${priced['price_best'].mean():,.0f}" if len(priced) else "N/A")
-    c5.metric("Median $/m\u00b2", f"${priced['price_per_m2'].median():,.0f}" if len(priced) else "N/A")
+    c5.metric("Avg $/m\u00b2", f"${priced['price_per_m2'].mean():,.0f}" if len(priced) else "N/A")
 
     st.divider()
 
@@ -598,12 +598,12 @@ if page == "Overview":
         if len(priced) > 0:
             m2_hero = (priced.dropna(subset=["price_per_m2"])
                        .groupby("color_architecture", observed=True)["price_per_m2"]
-                       .median().reset_index())
-            m2_hero.columns = ["Technology", "Median $/m\u00b2"]
-            wled_base = m2_hero.loc[m2_hero["Technology"] == "WLED", "Median $/m\u00b2"]
+                       .mean().reset_index())
+            m2_hero.columns = ["Technology", "Avg $/m\u00b2"]
+            wled_base = m2_hero.loc[m2_hero["Technology"] == "WLED", "Avg $/m\u00b2"]
             wled_hero = float(wled_base.iloc[0]) if len(wled_base) > 0 else None
-            fig = px.bar(m2_hero, x="Technology", y="Median $/m\u00b2", color="Technology",
-                         color_discrete_map=TECH_COLORS, text="Median $/m\u00b2",
+            fig = px.bar(m2_hero, x="Technology", y="Avg $/m\u00b2", color="Technology",
+                         color_discrete_map=TECH_COLORS, text="Avg $/m\u00b2",
                          category_orders={"Technology": TECH_ORDER})
             fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside",
                               textfont_size=13, textfont_weight=600, cliponaxis=False)
@@ -1254,13 +1254,13 @@ elif page == "Price Analyzer":
 
     m2_data = (priced.dropna(subset=["price_per_m2"])
                .groupby("color_architecture", observed=True)["price_per_m2"]
-               .median().reset_index())
-    m2_data.columns = ["Technology", "Median $/m\u00b2"]
-    wled_baseline = m2_data.loc[m2_data["Technology"] == "WLED", "Median $/m\u00b2"]
+               .mean().reset_index())
+    m2_data.columns = ["Technology", "Avg $/m\u00b2"]
+    wled_baseline = m2_data.loc[m2_data["Technology"] == "WLED", "Avg $/m\u00b2"]
     wled_val = float(wled_baseline.iloc[0]) if len(wled_baseline) > 0 else None
 
-    fig = px.bar(m2_data, x="Technology", y="Median $/m\u00b2", color="Technology",
-                 color_discrete_map=TECH_COLORS, text="Median $/m\u00b2",
+    fig = px.bar(m2_data, x="Technology", y="Avg $/m\u00b2", color="Technology",
+                 color_discrete_map=TECH_COLORS, text="Avg $/m\u00b2",
                  category_orders={"Technology": TECH_ORDER})
     fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside",
                       textfont_size=14, textfont_weight=600, cliponaxis=False)
@@ -1271,7 +1271,7 @@ elif page == "Price Analyzer":
     st.plotly_chart(fig, use_container_width=True)
 
     # Premium metrics row
-    m2_col = "Median $/m\u00b2"
+    m2_col = "Avg $/m\u00b2"
     if wled_val and wled_val > 0:
         techs_with_m2 = m2_data[m2_data["Technology"] != "WLED"].sort_values(m2_col)
         mcols = st.columns(len(techs_with_m2))
@@ -1370,25 +1370,25 @@ elif page == "Price Analyzer":
                 snap_common = snap[snap["size"].isin(common_sizes)]
 
                 size_tech = (snap_common.groupby(["size", "color_architecture"])["price_per_m2"]
-                             .median().reset_index())
-                size_tech.columns = ["Size", "Technology", "Median $/m\u00b2"]
+                             .mean().reset_index())
+                size_tech.columns = ["Size", "Technology", "Avg $/m\u00b2"]
                 size_tech["Size"] = size_tech["Size"].astype(str) + '"'
 
-                fig = px.bar(size_tech, x="Size", y="Median $/m\u00b2",
+                fig = px.bar(size_tech, x="Size", y="Avg $/m\u00b2",
                              color="Technology", color_discrete_map=TECH_COLORS,
                              barmode="group",
                              category_orders={
                                  "Technology": TECH_ORDER,
                                  "Size": [f'{s}"' for s in common_sizes],
                              },
-                             text="Median $/m\u00b2")
+                             text="Avg $/m\u00b2")
                 fig.update_traces(texttemplate="$%{text:,.0f}", textposition="outside",
                                   textfont_size=10, cliponaxis=False)
                 fig.update_layout(height=500, legend_title_text="Technology", **PL)
                 st.plotly_chart(fig, use_container_width=True)
 
                 # Also show the raw data table
-                pivot = size_tech.pivot(index="Technology", columns="Size", values="Median $/m\u00b2")
+                pivot = size_tech.pivot(index="Technology", columns="Size", values="Avg $/m\u00b2")
                 pivot = pivot.reindex([t for t in TECH_ORDER if t in pivot.index])
                 pivot = pivot[[f'{s}"' for s in common_sizes if f'{s}"' in pivot.columns]]
                 st.dataframe(
@@ -1461,7 +1461,7 @@ elif page == "Price Analyzer":
             st.dataframe(pd.DataFrame(best_per_tech), use_container_width=True, hide_index=True)
 
     with tab4:
-        st.subheader("Median $/m\u00b2 by Technology Over Time")
+        st.subheader("Avg $/m\u00b2 by Technology Over Time")
 
         if len(history_df) == 0:
             st.info("No price history available yet. Run the pricing pipeline "
@@ -1502,14 +1502,14 @@ elif page == "Price Analyzer":
                 else:  # YTD
                     time_cols = ["year"]
 
-                # Per-product median $/m², then per-tech median per period
+                # Per-product mean $/m² across sizes, then per-tech mean across products
                 prod_agg = (
                     hist_m2.groupby(time_cols + ["product_id", "color_architecture"])["price_per_m2"]
-                    .median().reset_index()
+                    .mean().reset_index()
                 )
                 period_agg = (
                     prod_agg.groupby(time_cols + ["color_architecture"])["price_per_m2"]
-                    .median().reset_index()
+                    .mean().reset_index()
                 )
 
                 # Build sortable period label
@@ -1533,15 +1533,15 @@ elif page == "Price Analyzer":
 
                 period_agg = period_agg.sort_values("_sort")
                 period_agg.rename(columns={"color_architecture": "Technology",
-                                           "price_per_m2": "Median $/m\u00b2"}, inplace=True)
+                                           "price_per_m2": "Avg $/m\u00b2"}, inplace=True)
 
                 n_periods = period_agg["Period"].nunique()
 
                 fig = px.line(
-                    period_agg, x="Period", y="Median $/m\u00b2",
+                    period_agg, x="Period", y="Avg $/m\u00b2",
                     color="Technology", color_discrete_map=TECH_COLORS,
                     markers=True,
-                    labels={"Median $/m\u00b2": "Median $/m\u00b2", "Period": ""},
+                    labels={"Avg $/m\u00b2": "Avg $/m\u00b2", "Period": ""},
                     category_orders={"Period": period_agg["Period"].unique().tolist(),
                                      "Technology": TECH_ORDER},
                 )
@@ -1565,7 +1565,7 @@ elif page == "Price Analyzer":
                         hist_sized = hist_m2[hist_m2["size_inches"] == size_val]
                         sized_agg = (
                             hist_sized.groupby(time_cols + ["color_architecture"])["price_per_m2"]
-                            .median().reset_index()
+                            .mean().reset_index()
                         )
                         # Reuse same period labeling logic
                         if granularity == "Weekly":
@@ -1586,12 +1586,12 @@ elif page == "Price Analyzer":
                             sized_agg["_sort"] = sized_agg["year"]
                         sized_agg = sized_agg.sort_values("_sort")
                         sized_agg.rename(columns={"color_architecture": "Technology",
-                                                  "price_per_m2": "Median $/m\u00b2"}, inplace=True)
+                                                  "price_per_m2": "Avg $/m\u00b2"}, inplace=True)
                         fig2 = px.line(
-                            sized_agg, x="Period", y="Median $/m\u00b2",
+                            sized_agg, x="Period", y="Avg $/m\u00b2",
                             color="Technology", color_discrete_map=TECH_COLORS,
                             markers=True,
-                            labels={"Median $/m\u00b2": f'Median $/m\u00b2 \u2014 {size_filter}', "Period": ""},
+                            labels={"Avg $/m\u00b2": f'Avg $/m\u00b2 \u2014 {size_filter}', "Period": ""},
                             category_orders={"Period": sized_agg["Period"].unique().tolist(),
                                              "Technology": TECH_ORDER},
                         )
@@ -1704,7 +1704,7 @@ elif page == "Temporal Analysis":
             avg_gaming=("gaming", "mean"),
             avg_sports=("sports", "mean"),
             avg_bright=("bright_room", "mean"),
-            avg_price_m2=("price_per_m2", "median"),
+            avg_price_m2=("price_per_m2", "mean"),
         )
         .reset_index()
     )
@@ -1841,9 +1841,9 @@ elif page == "Temporal Analysis":
             _ch3["year_str"] = _ch3["model_year"].astype(str)
             _ch3["label"] = _ch3["avg_price_m2"].apply(lambda v: f"${v:,.0f}")
 
-            # WLED baseline (overall median across all years)
+            # WLED baseline (overall mean across all years)
             _wled_all = tdf[tdf["color_architecture"] == "WLED"]["price_per_m2"].dropna()
-            _wled_baseline = float(_wled_all.median()) if len(_wled_all) > 0 else None
+            _wled_baseline = float(_wled_all.mean()) if len(_wled_all) > 0 else None
 
             fig3 = px.bar(
                 _ch3,
@@ -1860,7 +1860,7 @@ elif page == "Temporal Analysis":
                 },
                 labels={
                     "year_str": "Model Year",
-                    "avg_price_m2": "Median $/m\u00b2",
+                    "avg_price_m2": "Avg $/m\u00b2",
                     "color_architecture": "Technology",
                     "n": "Sample Size",
                 },
@@ -1939,13 +1939,13 @@ elif page == "Temporal Analysis":
                                 pct = (c_m2 - p_m2) / p_m2 * 100
                                 m2_delta = f"{pct:+.0f}%"
                             st.metric(
-                                "Median $/m\u00b2",
+                                "Avg $/m\u00b2",
                                 f"${c_m2:,.0f}",
                                 delta=m2_delta,
                                 delta_color="inverse",
                             )
                         else:
-                            st.metric("Median $/m\u00b2", "N/A")
+                            st.metric("Avg $/m\u00b2", "N/A")
                     with cols[2]:
                         if pd.notna(c_m2) and c_score > 0:
                             val = c_m2 / c_score

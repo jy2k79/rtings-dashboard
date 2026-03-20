@@ -661,7 +661,7 @@ def merge_pricing(retailer_df, keepa_df, bestbuy_df):
 
         # Median $/m² across ALL sizes for this product family
         all_m2 = priced_rows['price_per_m2'].dropna()
-        median_per_m2 = all_m2.median() if len(all_m2) > 0 else None
+        median_per_m2 = all_m2.mean() if len(all_m2) > 0 else None
 
         # Representative price: prefer 65", then closest to 65" (among rows with a price)
         best_row = None
