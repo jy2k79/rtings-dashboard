@@ -278,11 +278,28 @@ def load_price_history(product_type="TVs"):
     return pd.DataFrame()
 
 # Screen area lookup for $/m² calculations (shared with pricing_pipeline.py)
+# Screen area lookup — covers both TV (16:9) and monitor sizes.
+# Monitor ultrawides use different aspect ratios:
+#   34"/38" = 21:9, 49"/57" = 32:9, all others = 16:9.
+import math as _math
+def _area(diag, aw=16, ah=9):
+    d = diag * 0.0254
+    r = aw / ah
+    return d * r / _math.sqrt(1 + r**2) * d / _math.sqrt(1 + r**2)
+
 _SCREEN_AREA_M2_GLOBAL = {
+    # TV sizes (16:9)
     32: 0.22, 40: 0.34, 42: 0.38, 43: 0.40, 48: 0.50,
     50: 0.54, 55: 0.65, 58: 0.72, 60: 0.77, 65: 0.91,
     70: 1.06, 75: 1.21, 77: 1.28, 80: 1.38, 83: 1.49,
     85: 1.56, 86: 1.59, 98: 2.07, 100: 2.15,
+    # Monitor sizes (16:9)
+    24: _area(24), 25: _area(25), 27: _area(27), 28: _area(28),
+    30: _area(30), 45: _area(45),
+    # Monitor ultrawides (21:9)
+    34: _area(34, 21, 9), 38: _area(38, 21, 9),
+    # Monitor super ultrawides (32:9)
+    49: _area(49, 32, 9), 57: _area(57, 32, 9),
 }
 
 
@@ -674,7 +691,7 @@ if page == "Overview":
         st.subheader("Technology Cost per m\u00b2")
         if len(priced) > 0:
             m2_hero = (priced.dropna(subset=["price_per_m2"])
-                       .groupby("color_architecture", observed=True)["price_per_m2"]
+                       .groupby("color_architecture", observed=False)["price_per_m2"]
                        .mean().reset_index())
             m2_hero.columns = ["Technology", "Avg $/m\u00b2"]
             wled_base = m2_hero.loc[m2_hero["Technology"] == "WLED", "Avg $/m\u00b2"]
@@ -1331,7 +1348,7 @@ elif page == "Price Analyzer":
                "Per-product median across all available sizes. Data limited to RTINGS-reviewed models.")
 
     m2_data = (priced.dropna(subset=["price_per_m2"])
-               .groupby("color_architecture", observed=True)["price_per_m2"]
+               .groupby("color_architecture", observed=False)["price_per_m2"]
                .mean().reset_index())
     m2_data.columns = ["Technology", "Avg $/m\u00b2"]
     wled_baseline = m2_data.loc[m2_data["Technology"] == "WLED", "Avg $/m\u00b2"]
