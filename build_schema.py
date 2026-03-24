@@ -274,13 +274,18 @@ def build_schema():
     # (marketing_label already computed above for KSF/Pseudo QD reclassification)
 
     # =========================================================================
+    # product_type — for future master dashboard compatibility
+    # =========================================================================
+    merged['product_type'] = 'tv'
+
+    # =========================================================================
     # Select and order output columns
     # =========================================================================
     schema_cols = [
         # Identity
         'product_id', 'fullname', 'brand', 'url_part', 'review_url',
         'test_bench_id', 'test_bench_version', 'released_at', 'first_published_at', 'last_updated_at',
-        'sizes_available',
+        'sizes_available', 'product_type',
 
         # Display Technology Schema (7 columns)
         'display_type',
