@@ -3,7 +3,12 @@ name: Weekly Data Update
 on:
   schedule:
     - cron: '0 13 * * 1'  # Monday 8 AM ET (1 PM UTC)
-  workflow_dispatch:       # Manual trigger from GitHub UI
+  workflow_dispatch:
+    inputs:
+      qd_export_only:
+        description: 'Only run QD export (skip full pipeline)'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -40,7 +45,12 @@ jobs:
           GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
-        run: python weekly_update.py --silo all
+        run: |
+          if [ "${{ inputs.qd_export_only }}" = "true" ]; then
+            python weekly_update.py --qd-export-only
+          else
+            python weekly_update.py --silo all
+          fi
 
       - name: Commit updated data
         run: |

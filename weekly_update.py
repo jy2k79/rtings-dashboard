@@ -696,12 +696,21 @@ def main():
         "--dry", action="store_true",
         help="Show execution plan without running",
     )
+    parser.add_argument(
+        "--qd-export-only", action="store_true",
+        help="Skip pipeline, just build and send the QD export from existing data",
+    )
     args = parser.parse_args()
 
     print("=" * 70)
     print(f"WEEKLY DATA UPDATE — {args.silo.upper()}")
     print(f"Date: {TODAY}  |  Environment: {'GitHub Actions' if IN_CI else 'Local'}")
     print("=" * 70)
+
+    if args.qd_export_only:
+        log("QD export only — skipping pipeline")
+        run_script("qd_export.py", abort_on_fail=False)
+        sys.exit(0)
 
     if args.dry:
         log("DRY RUN — showing execution plan only")
