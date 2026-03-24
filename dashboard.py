@@ -36,15 +36,24 @@ def check_password():
     """Return True if the user has entered the correct password."""
     if "authenticated" in st.session_state and st.session_state.authenticated:
         return True
-    pwd = st.text_input("Password", type="password", key="pwd_input")
-    if pwd:
-        if pwd == st.secrets.get("app_password", ""):
-            st.session_state.authenticated = True
-            st.rerun()
+    # Login page with centered logo
+    _login_logo = Path(__file__).parent / "logos" / "Nanosys Logo White Text 4X.png"
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        if _login_logo.exists():
+            st.image(str(_login_logo), use_container_width=True)
+            st.markdown("<p style='text-align:center;color:#999;font-size:0.9em;margin-top:-8px'>"
+                        "Display Technology Intelligence</p>", unsafe_allow_html=True)
+        st.markdown("")
+        pwd = st.text_input("Password", type="password", key="pwd_input")
+        if pwd:
+            if pwd == st.secrets.get("app_password", ""):
+                st.session_state.authenticated = True
+                st.rerun()
+            else:
+                st.error("Incorrect password")
         else:
-            st.error("Incorrect password")
-    else:
-        st.info("Enter the dashboard password to continue.")
+            st.info("Enter the dashboard password to continue.")
     return False
 
 if not check_password():
@@ -546,7 +555,8 @@ st.sidebar.divider()
 
 # --- Product type selector ---
 _product_types = list(PRODUCT_CONFIGS.keys()) + ["All Products"]
-product_type = st.sidebar.radio("Product Type", _product_types, index=0,
+product_type = st.sidebar.radio("Product Type", _product_types,
+                                 index=_product_types.index("All Products"),
                                  key="product_type", horizontal=True)
 _is_blended = product_type == "All Products"
 PCFG = PRODUCT_CONFIGS.get(product_type, PRODUCT_CONFIGS["TVs"])
