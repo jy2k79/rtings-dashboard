@@ -2444,6 +2444,69 @@ elif page == "Cross-Product Analysis":
 
     st.divider()
 
+    # --- Section 0: Master RTINGS Score by Technology ---
+    st.subheader("Master RTINGS Score by Technology")
+    st.caption("TV: Mixed Usage score · Monitors: mean of PC Gaming, Console Gaming, Office, Editing · "
+               "Master: weighted average by product count")
+
+    # Compute composite score per product
+    _mon_score_cols = ["pc_gaming", "console_gaming", "office", "editing"]
+    _tv_mask = df["product_type"] == "tv"
+    _mon_mask = df["product_type"] == "monitor"
+
+    # TV uses mixed_usage, monitor uses mean of 4 scores
+    df["_master_score"] = np.nan
+    if "mixed_usage" in df.columns:
+        df.loc[_tv_mask, "_master_score"] = df.loc[_tv_mask, "mixed_usage"]
+    _available_mon_scores = [c for c in _mon_score_cols if c in df.columns]
+    if _available_mon_scores:
+        df.loc[_mon_mask, "_master_score"] = df.loc[_mon_mask, _available_mon_scores].mean(axis=1)
+
+    _master_by_tech = (df.dropna(subset=["_master_score"])
+                       .groupby("color_architecture", observed=False)
+                       .agg(_score=("_master_score", "mean"), _n=("_master_score", "size"))
+                       .reset_index())
+    _master_by_tech.columns = ["Technology", "Master Score", "n"]
+
+    ms1, ms2 = st.columns(2)
+    with ms1:
+        st.markdown("**Master Score by Technology**")
+        fig = px.bar(_master_by_tech, x="Technology", y="Master Score",
+                     color="Technology", color_discrete_map=TECH_COLORS,
+                     text=_master_by_tech["Master Score"].apply(lambda x: f"{x:.1f}" if pd.notna(x) else ""),
+                     category_orders={"Technology": TECH_ORDER},
+                     hover_data={"n": True})
+        fig.update_traces(textposition="outside", textfont_size=14, textfont_weight=600,
+                          cliponaxis=False)
+        fig.update_layout(showlegend=False, height=400,
+                          yaxis=dict(range=[0, 10.5], title="Avg Score"),
+                          **PL)
+        st.plotly_chart(fig, use_container_width=True)
+
+    with ms2:
+        st.markdown("**Score Breakdown: TVs vs Monitors**")
+        _score_by_type = (df.dropna(subset=["_master_score"])
+                          .groupby(["color_architecture", "Product Type"], observed=False)["_master_score"]
+                          .mean().reset_index())
+        _score_by_type.columns = ["Technology", "Product Type", "Avg Score"]
+        _score_by_type = _score_by_type.dropna(subset=["Avg Score"])
+        if len(_score_by_type) > 0:
+            fig = px.bar(_score_by_type, x="Technology", y="Avg Score",
+                         color="Product Type",
+                         color_discrete_map={"TVs": "#FFC700", "Monitors": "#4B40EB"},
+                         barmode="group", text=_score_by_type["Avg Score"].apply(lambda x: f"{x:.1f}"),
+                         category_orders={"Technology": TECH_ORDER})
+            fig.update_traces(textposition="outside", textfont_size=12, textfont_weight=600,
+                              cliponaxis=False)
+            fig.update_layout(height=400, legend_title_text="",
+                              yaxis=dict(range=[0, 10.5], title="Avg Score"), **PL)
+            st.plotly_chart(fig, use_container_width=True)
+
+    # Clean up temp column
+    df.drop(columns=["_master_score"], inplace=True)
+
+    st.divider()
+
     # --- Section 1: QD Adoption ---
     st.subheader("Quantum Dot Adoption")
     qd1, qd2, qd3 = st.columns(3)
