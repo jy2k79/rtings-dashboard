@@ -541,7 +541,40 @@ if _logo_path.exists():
     st.sidebar.image(str(_logo_path), use_container_width=True)
     st.sidebar.markdown("<p style='text-align:center;color:#999;font-size:0.85em;margin-top:-8px'>Display Technology Intelligence</p>",
                         unsafe_allow_html=True)
-    st.sidebar.divider()
+
+# --- Version info ---
+_VERSION = "2.0"
+_CHANGELOG = {
+    "2.0 — 2026-03-24": [
+        "Added Monitor support (70 monitors, v2.1.2+)",
+        "New \"All Products\" cross-product analysis view",
+        "Master RTINGS Score by technology (TV + Monitor blended)",
+        "QD Adoption dashboard with brand breakdown",
+        "$/m\u00b2 comparison across TVs vs Monitors",
+        "Brand strategy heatmap",
+        "FWHM cross-product validation",
+        "QD SKU Tracker weekly email export",
+        "SPD calibration hardening (gridline consistency check)",
+    ],
+    "1.0 — 2026-02-15": [
+        "Initial TV dashboard with 85+ TVs",
+        "SPD-based technology classification",
+        "Keepa + Best Buy pricing pipeline",
+        "6 dashboard pages: Overview, Tech Explorer, Price Analyzer, Temporal, Comparison, Profiles",
+    ],
+}
+st.sidebar.markdown(
+    f"<p style='text-align:center;color:#666;font-size:0.75em;margin-top:-4px;margin-bottom:-4px'>"
+    f"Version {_VERSION}</p>",
+    unsafe_allow_html=True,
+)
+with st.sidebar.expander("What's new?", expanded=False):
+    for version, changes in _CHANGELOG.items():
+        st.markdown(f"**{version}**")
+        for change in changes:
+            st.markdown(f"- {change}")
+
+st.sidebar.divider()
 
 # --- Product type selector ---
 _product_types = list(PRODUCT_CONFIGS.keys()) + ["All Products"]
