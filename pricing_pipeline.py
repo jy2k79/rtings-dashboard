@@ -373,7 +373,7 @@ def keepa_time_to_datetime(keepa_min):
     return epoch + timedelta(minutes=int(keepa_min))
 
 
-def fetch_keepa_prices(retailer_df):
+def fetch_keepa_prices(retailer_df, output_path=None):
     """Pull price history from Keepa for all Amazon ASINs."""
     if not KEEPA_API_KEY:
         print("ERROR: KEEPA_API_KEY not set in .env")
@@ -494,7 +494,7 @@ def fetch_keepa_prices(retailer_df):
 
     df = pd.DataFrame(all_price_records)
     if len(df) > 0:
-        out = DATA_DIR / "keepa_prices.csv"
+        out = output_path or (DATA_DIR / "keepa_prices.csv")
         df.to_csv(out, index=False)
         print(f"\n  Keepa data saved: {out}")
         print(f"  Products with data: {len(df)}")
@@ -507,7 +507,7 @@ def fetch_keepa_prices(retailer_df):
 # ============================================================================
 # STEP 3: Best Buy API Current Prices
 # ============================================================================
-def fetch_bestbuy_prices(retailer_df):
+def fetch_bestbuy_prices(retailer_df, output_path=None):
     """Pull current prices from Best Buy API for all Best Buy SKUs."""
     if not BESTBUY_API_KEY:
         print("\nSkipping Best Buy API (no BESTBUY_API_KEY in .env)")
@@ -564,7 +564,7 @@ def fetch_bestbuy_prices(retailer_df):
 
     df = pd.DataFrame(all_records)
     if len(df) > 0:
-        out = DATA_DIR / "bestbuy_prices.csv"
+        out = output_path or (DATA_DIR / "bestbuy_prices.csv")
         df.to_csv(out, index=False)
         print(f"\n  Best Buy data saved: {out}")
         print(f"  Products with price: {df['bb_sale_price'].notna().sum()}")

@@ -401,53 +401,24 @@ def print_monitor_pricing_summary(merged, prices_df):
 
 
 def main():
-    import shutil
-
     print("=" * 70)
     print("MONITOR PRICING PIPELINE")
     print("=" * 70)
 
-    # Back up TV pricing files before shared functions overwrite them
-    tv_keepa = DATA_DIR / "keepa_prices.csv"
-    tv_bestbuy = DATA_DIR / "bestbuy_prices.csv"
-    tv_retailer = DATA_DIR / "product_retailer_ids.csv"
-    backups = {}
-    for f in [tv_keepa, tv_bestbuy, tv_retailer]:
-        if f.exists():
-            bak = f.with_suffix('.csv.tvbak')
-            shutil.copy2(f, bak)
-            backups[f] = bak
+    # Step 1: Extract retailer IDs from RTINGS
+    us_data, ca_data = fetch_rtings_monitor_prices()
+    retailer_df = extract_all_monitor_ids(us_data, ca_data)
 
-    try:
-        # Step 1: Extract retailer IDs from RTINGS
-        us_data, ca_data = fetch_rtings_monitor_prices()
-        retailer_df = extract_all_monitor_ids(us_data, ca_data)
+    # Step 2: Keepa (Amazon) prices — write to monitor-specific file
+    keepa_df = fetch_keepa_prices(retailer_df,
+                                   output_path=DATA_DIR / "monitor_keepa_prices.csv")
 
-        # Step 2: Keepa (Amazon) prices
-        # Note: shared function writes to data/keepa_prices.csv
-        keepa_df = fetch_keepa_prices(retailer_df)
+    # Step 3: Best Buy prices — write to monitor-specific file
+    bestbuy_df = fetch_bestbuy_prices(retailer_df,
+                                      output_path=DATA_DIR / "monitor_bestbuy_prices.csv")
 
-        # Step 3: Best Buy prices
-        # Note: shared function writes to data/bestbuy_prices.csv
-        bestbuy_df = fetch_bestbuy_prices(retailer_df)
-
-        # Save monitor-specific copies
-        mon_keepa = DATA_DIR / "monitor_keepa_prices.csv"
-        mon_bestbuy = DATA_DIR / "monitor_bestbuy_prices.csv"
-        if tv_keepa.exists():
-            shutil.copy2(tv_keepa, mon_keepa)
-        if tv_bestbuy.exists():
-            shutil.copy2(tv_bestbuy, mon_bestbuy)
-
-        # Step 4: Merge
-        merge_monitor_pricing(retailer_df, keepa_df, bestbuy_df)
-
-    finally:
-        # Restore TV pricing files
-        for orig, bak in backups.items():
-            if bak.exists():
-                shutil.copy2(bak, orig)
-                bak.unlink()
+    # Step 4: Merge
+    merge_monitor_pricing(retailer_df, keepa_df, bestbuy_df)
 
 
 def extract_all_monitor_ids(us_data, ca_data):
