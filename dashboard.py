@@ -303,29 +303,31 @@ def load_price_history(product_type="TVs"):
     return pd.DataFrame()
 
 # Screen area lookup for $/m² calculations (shared with pricing_pipeline.py)
-# Screen area lookup — covers both TV (16:9) and monitor sizes.
-# Monitor ultrawides use different aspect ratios:
-#   34"/38" = 21:9, 49"/57" = 32:9, all others = 16:9.
+# Screen area lookups.
+# TV values match pricing_pipeline.py (historically established, internally consistent).
+# Monitor values use exact formula with per-product aspect ratios.
 import math as _math
 def _area(diag, aw=16, ah=9):
     d = diag * 0.0254
     r = aw / ah
     return d * r / _math.sqrt(1 + r**2) * d / _math.sqrt(1 + r**2)
 
-_SCREEN_AREA_M2_GLOBAL = {
-    # TV sizes (16:9)
+# TV sizes — must match pricing_pipeline.py SCREEN_AREA_M2
+_TV_SCREEN_AREA = {
     32: 0.22, 40: 0.34, 42: 0.38, 43: 0.40, 48: 0.50,
     50: 0.54, 55: 0.65, 58: 0.72, 60: 0.77, 65: 0.91,
     70: 1.06, 75: 1.21, 77: 1.28, 80: 1.38, 83: 1.49,
     85: 1.56, 86: 1.59, 98: 2.07, 100: 2.15,
-    # Monitor sizes (16:9)
-    24: _area(24), 25: _area(25), 27: _area(27), 28: _area(28),
-    30: _area(30), 45: _area(45),
-    # Monitor ultrawides (21:9)
-    34: _area(34, 21, 9), 38: _area(38, 21, 9),
-    # Monitor super ultrawides (32:9)
-    49: _area(49, 32, 9), 57: _area(57, 32, 9),
 }
+# Monitor sizes — formula-computed, matching monitor_pricing_pipeline.py
+_MONITOR_SCREEN_AREA = {s: _area(s) for s in [24, 25, 27, 28, 30, 32, 40, 42, 45, 55]}
+_MONITOR_SCREEN_AREA[34] = _area(34, 21, 9)
+_MONITOR_SCREEN_AREA[38] = _area(38, 21, 9)
+_MONITOR_SCREEN_AREA[49] = _area(49, 32, 9)
+_MONITOR_SCREEN_AREA[57] = _area(57, 32, 9)
+
+# Selected at runtime based on product type (set after sidebar selection)
+_SCREEN_AREA_M2_GLOBAL = _TV_SCREEN_AREA  # default, updated below
 
 
 # Samsung OLED sizes that use WOLED panels despite QD-OLED classification.
@@ -547,6 +549,7 @@ product_type = st.sidebar.radio("Product Type", _product_types, index=0,
                                  key="product_type", horizontal=True)
 _is_blended = product_type == "All Products"
 PCFG = PRODUCT_CONFIGS.get(product_type, PRODUCT_CONFIGS["TVs"])
+_SCREEN_AREA_M2_GLOBAL = _MONITOR_SCREEN_AREA if product_type == "Monitors" else _TV_SCREEN_AREA
 st.sidebar.divider()
 
 # Load data for selected product type
@@ -555,6 +558,15 @@ if _is_blended:
     # Ensure product_type column exists
     if "product_type" not in df.columns:
         df["product_type"] = "tv"  # fallback
+    # Enrich TV subset $/m² from history so it matches the TV-only view
+    _tv_hist = load_price_history("TVs")
+    if len(_tv_hist) > 0:
+        _tv_hist_enriched = enrich_history(_tv_hist, main_df=df[df["product_type"] == "tv"])
+        _tv_m2_map = compute_m2_from_history(_tv_hist_enriched)
+        _tv_mask = df["product_type"] == "tv"
+        df.loc[_tv_mask, "price_per_m2"] = df.loc[_tv_mask, "product_id"].map(
+            lambda pid: _tv_m2_map.get(pid) or _tv_m2_map.get(str(pid))
+        )
     prices_df = pd.DataFrame()
     history_df = pd.DataFrame()
 else:
@@ -580,10 +592,12 @@ if not _is_blended:
             lambda pid: _m2_map.get(pid) or _m2_map.get(str(pid))
         )
 
+# Exclude 8K products globally (tiny segment that skews averages)
 _n_8k = 0
-if not _is_blended and PCFG["has_8k_exclusion"] and "resolution" in df.columns:
+if "resolution" in df.columns:
     _n_8k = (df["resolution"] == "8k").sum()
-    df = df[df["resolution"] != "8k"].reset_index(drop=True)
+    if _n_8k > 0:
+        df = df[df["resolution"] != "8k"].reset_index(drop=True)
 
 if "released_at" in df.columns:
     df["model_year"] = df["released_at"].dt.year
@@ -806,7 +820,7 @@ if page == "Overview":
                               xaxis=dict(range=axis_range("price_best")), **PL)
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info("No priced TVs in current filter.")
+            st.info(f"No priced {PCFG['item_label'].lower()} in current filter.")
 
     with col4:
         st.subheader("Price by Technology")
@@ -821,7 +835,7 @@ if page == "Overview":
             fig.update_traces(marker=dict(size=8))
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.info("No priced TVs in current filter.")
+            st.info(f"No priced {PCFG['item_label'].lower()} in current filter.")
 
     st.subheader("Usage Score Overview")
     score_cols = [c for c in PCFG["score_cols"] if c in fdf.columns]
@@ -928,11 +942,12 @@ elif page == "Technology Explorer":
     with tab3:
         st.subheader("Panel Performance by Technology")
 
-        metric_options = [
+        _all_metric_options = [
             "native_contrast", "hdr_peak_10pct_nits", "sdr_real_scene_peak_nits",
             "hdr_bt2020_coverage_itp_pct", "sdr_dci_p3_coverage_pct",
-            "input_lag_4k_ms", "total_response_time_ms",
+            PCFG["input_lag_col"], "total_response_time_ms",
         ]
+        metric_options = [m for m in _all_metric_options if m in fdf.columns]
         metric = st.selectbox(
             "Metric",
             metric_options,
@@ -1157,10 +1172,11 @@ elif page == "Technology Explorer":
         st.subheader(f"What Drives {_ps_label} Scores?")
         st.caption(f"Correlation analysis: which metrics predict overall {PCFG['item_singular'].lower()} performance")
 
-        corr_metrics = {
+        _all_corr_metrics = {
             "contrast_ratio_score": "Contrast Ratio Score",
             "black_level_score": "Black Level Score",
             "color_score": "Color Score",
+            "color_accuracy": "Color Accuracy",
             "hdr_bt2020_coverage_itp_pct": "HDR BT.2020 Coverage",
             "brightness_score": "Brightness Score",
             "sdr_dci_p3_coverage_pct": "DCI-P3 Coverage",
@@ -1169,8 +1185,9 @@ elif page == "Technology Explorer":
             "hdr_peak_2pct_nits": "HDR Peak (2%)",
             "sdr_real_scene_peak_nits": "SDR Peak Brightness",
             "total_response_time_ms": "Response Time",
-            "input_lag_4k_ms": "4K Input Lag",
+            PCFG["input_lag_col"]: friendly(PCFG["input_lag_col"]),
         }
+        corr_metrics = {k: v for k, v in _all_corr_metrics.items() if k in fdf.columns}
         corr_data = []
         for col, label in corr_metrics.items():
             if col in fdf.columns and _ps in fdf.columns:
@@ -1246,7 +1263,8 @@ elif page == "Technology Explorer":
                 pos_valid, x="hdr_peak_10pct_nits", y="hdr_bt2020_coverage_itp_pct",
                 color="color_architecture", color_discrete_map=TECH_COLORS,
                 category_orders={"color_architecture": TECH_ORDER},
-                size="mixed_usage", size_max=22,
+                size=PCFG["primary_score"] if PCFG["primary_score"] in pos_valid.columns else None,
+                size_max=22,
                 hover_name="fullname", hover_data=["brand", "price_best"],
                 labels={
                     "hdr_peak_10pct_nits": "HDR Peak Brightness (nits)",
@@ -1269,7 +1287,7 @@ elif page == "Technology Explorer":
 
         val_priced = fdf[fdf["price_per_mixed_use"].notna()].copy()
         if len(val_priced) == 0:
-            st.warning("No priced TVs match the current filters.")
+            st.warning(f"No priced {PCFG['item_label'].lower()} match the current filters.")
         else:
             fig = px.box(val_priced, x="color_architecture", y="price_per_mixed_use",
                          color="color_architecture", color_discrete_map=TECH_COLORS,
@@ -1377,7 +1395,7 @@ elif page == "Price Analyzer":
 
     priced = fdf[fdf["price_best"].notna()].copy()
     if len(priced) == 0:
-        st.warning("No priced TVs match the current filters.")
+        st.warning(f"No priced {PCFG['item_label'].lower()} match the current filters.")
         st.stop()
 
     # Merge Amazon channels: amazon + amazon_3p → Amazon
@@ -1830,22 +1848,16 @@ elif page == "Temporal Analysis":
     _n_valid_years = len(_valid_years)
 
     if _n_valid_years == 0:
-        st.warning("No TVs with release date information available.")
+        st.warning(f"No {PCFG['item_label'].lower()} with release date information available.")
         st.stop()
 
     # Build per-(tech, year) aggregation used across multiple charts
+    _avail_scores = [c for c in PCFG["score_cols"] if c in tdf.columns]
+    _score_agg = {f"avg_{c}": (c, "mean") for c in _avail_scores}
     _ty = (
         tdf.dropna(subset=["model_year"])
         .groupby(["color_architecture", "model_year"])
-        .agg(
-            n=("fullname", "size"),
-            avg_mixed=("mixed_usage", "mean"),
-            avg_ht=("home_theater", "mean"),
-            avg_gaming=("gaming", "mean"),
-            avg_sports=("sports", "mean"),
-            avg_bright=("bright_room", "mean"),
-            avg_price_m2=("price_per_m2", "mean"),
-        )
+        .agg(n=("fullname", "size"), avg_price_m2=("price_per_m2", "mean"), **_score_agg)
         .reset_index()
     )
     _ty["model_year"] = _ty["model_year"].astype(int)
@@ -1858,18 +1870,21 @@ elif page == "Temporal Analysis":
     # Tab 1: Performance Trends
     # ------------------------------------------------------------------
     with tab_perf:
-        # Chart 1 — Avg Mixed Usage by Technology by Year (grouped bar)
-        st.subheader("Average Mixed Usage by Technology & Year")
-        _ch1 = _ty.dropna(subset=["avg_mixed"]).copy()
+        # Chart 1 — Avg primary score by Technology by Year (grouped bar)
+        _ps = PCFG["primary_score"]
+        _ps_agg = f"avg_{_ps}"
+        _ps_label = friendly(_ps)
+        st.subheader(f"Average {_ps_label} by Technology & Year")
+        _ch1 = _ty.dropna(subset=[_ps_agg]).copy() if _ps_agg in _ty.columns else pd.DataFrame()
         if len(_ch1) == 0:
-            st.info("Not enough scored TVs per technology/year (need n >= 2).")
+            st.info(f"Not enough scored {PCFG['item_label'].lower()} per technology/year.")
         else:
             _ch1["year_str"] = _ch1["model_year"].astype(str)
-            _ch1["label"] = _ch1["avg_mixed"].apply(lambda v: f"{v:.1f}")
+            _ch1["label"] = _ch1[_ps_agg].apply(lambda v: f"{v:.1f}")
             fig1 = px.bar(
                 _ch1,
                 x="year_str",
-                y="avg_mixed",
+                y=_ps_agg,
                 color="color_architecture",
                 barmode="group",
                 text="label",
@@ -1881,7 +1896,7 @@ elif page == "Temporal Analysis":
                 },
                 labels={
                     "year_str": "Model Year",
-                    "avg_mixed": "Avg Mixed Usage Score",
+                    _ps_agg: f"Avg {_ps_label} Score",
                     "color_architecture": "Technology",
                     "n": "Sample Size",
                 },
@@ -1898,13 +1913,7 @@ elif page == "Temporal Analysis":
 
         # Chart 2 — Score Trajectory (line + strip, user-selectable metric)
         st.subheader("Score Trajectory by Technology")
-        _metric_options = {
-            "Mixed Usage": "mixed_usage",
-            "Home Theater": "home_theater",
-            "Gaming": "gaming",
-            "Sports": "sports",
-            "Bright Room": "bright_room",
-        }
+        _metric_options = {friendly(c): c for c in _avail_scores}
         _selected_metric_label = st.selectbox(
             "Metric", list(_metric_options.keys()), index=0
         )
@@ -1917,13 +1926,7 @@ elif page == "Temporal Analysis":
             st.info(f"No data for {_selected_metric_label}.")
         else:
             # Per-tech mean line data
-            _agg_col = {
-                "mixed_usage": "avg_mixed",
-                "home_theater": "avg_ht",
-                "gaming": "avg_gaming",
-                "sports": "avg_sports",
-                "bright_room": "avg_bright",
-            }[_selected_metric]
+            _agg_col = f"avg_{_selected_metric}"
             _line = _ty.dropna(subset=[_agg_col]).copy()
 
             fig2 = go.Figure()
@@ -1976,7 +1979,7 @@ elif page == "Temporal Analysis":
         st.subheader("Average Price per m\u00b2 by Technology & Year")
         _ch3 = _ty.dropna(subset=["avg_price_m2"]).copy()
         if len(_ch3) == 0:
-            st.info("Not enough priced TVs per technology/year (need n >= 2).")
+            st.info(f"Not enough priced {PCFG['item_label'].lower()} per technology/year.")
         else:
             _ch3["year_str"] = _ch3["model_year"].astype(str)
             _ch3["label"] = _ch3["avg_price_m2"].apply(lambda v: f"${v:,.0f}")
@@ -2049,8 +2052,8 @@ elif page == "Temporal Analysis":
                 st.caption(f"Comparing {_prev_yr} vs {_latest_yr} model years")
                 for tech in _common_techs:
                     color = TECH_COLORS.get(tech, "#888")
-                    p_score = _prev.loc[tech, "avg_mixed"]
-                    c_score = _curr.loc[tech, "avg_mixed"]
+                    p_score = _prev.loc[tech, _ps_agg] if _ps_agg in _prev.columns else np.nan
+                    c_score = _curr.loc[tech, _ps_agg] if _ps_agg in _curr.columns else np.nan
                     score_delta = c_score - p_score
                     p_n = int(_prev.loc[tech, "n"])
                     c_n = int(_curr.loc[tech, "n"])
@@ -2067,11 +2070,14 @@ elif page == "Temporal Analysis":
                     )
                     cols = st.columns(3)
                     with cols[0]:
-                        st.metric(
-                            "Mixed Usage",
-                            f"{c_score:.1f}",
-                            delta=f"{score_delta:+.1f}",
-                        )
+                        if pd.notna(c_score):
+                            st.metric(
+                                _ps_label,
+                                f"{c_score:.1f}",
+                                delta=f"{score_delta:+.1f}" if pd.notna(score_delta) else None,
+                            )
+                        else:
+                            st.metric(_ps_label, "N/A")
                     with cols[1]:
                         if pd.notna(c_m2):
                             m2_delta = None
@@ -2163,16 +2169,16 @@ elif page == "Temporal Analysis":
 # PAGE: Comparison Tool
 # ============================================================================
 elif page == "Comparison Tool":
-    st.title("TV Comparison Tool")
+    st.title(f"{PCFG['item_singular']} Comparison Tool")
 
     all_names = sorted(fdf["fullname"].tolist())
     selected = st.multiselect(
-        "Select TVs to compare (up to 5)", all_names, max_selections=5,
+        f"Select {PCFG['item_label'].lower()} to compare (up to 5)", all_names, max_selections=5,
         default=all_names[:2] if len(all_names) >= 2 else all_names[:1],
     )
 
     if not selected:
-        st.info("Select at least one TV to compare.")
+        st.info(f"Select at least one {PCFG['item_singular'].lower()} to compare.")
         st.stop()
 
     comp = fdf[fdf["fullname"].isin(selected)].copy()
@@ -2269,9 +2275,9 @@ elif page == "Comparison Tool":
 # PAGE: TV Profiles
 # ============================================================================
 elif page == PCFG["profile_page"]:
-    st.title("TV Profile")
+    st.title(f"{PCFG['item_singular']} Profile")
 
-    selected_tv = st.selectbox("Select a TV", sorted(fdf["fullname"].tolist()))
+    selected_tv = st.selectbox(f"Select a {PCFG['item_singular'].lower()}", sorted(fdf["fullname"].tolist()))
     tv = fdf[fdf["fullname"] == selected_tv].iloc[0]
 
     col1, col2, col3 = st.columns([2, 1, 1])
@@ -2283,7 +2289,9 @@ elif page == PCFG["profile_page"]:
         if pd.notna(tv.get("price_per_m2")):
             st.metric("$/m\u00b2", f"${tv['price_per_m2']:,.0f}")
     with col3:
-        st.metric("Mixed Usage", f"{tv['mixed_usage']:.1f}/10")
+        _ps = PCFG["primary_score"]
+        _ps_val = tv.get(_ps)
+        st.metric(friendly(_ps), f"{_ps_val:.1f}/10" if pd.notna(_ps_val) else "N/A")
         if pd.notna(tv.get("marketing_label")):
             st.markdown(f"*{tv['marketing_label']}*")
 
