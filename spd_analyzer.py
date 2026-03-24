@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
 """
-SPD Analyzer for RTINGS TV Display Technology Classification
+SPD Analyzer for RTINGS Display Technology Classification
 =============================================================
 Extracts spectral curves from RTINGS SPD chart images, analyzes peak
-positions and widths (FWHM), and classifies each TV's color architecture.
+positions and widths (FWHM), and classifies each product's color architecture.
 
-Now reads from scraped data (data/rtings_tv_data.csv) and uses
-auto-calibration to detect plot boundaries from gridlines.
+Supports multiple product silos (TV, Monitor) via silo_config.py.
 
 Requirements:
     pip install Pillow numpy scipy pandas openpyxl matplotlib
 
 Usage:
-    python spd_analyzer.py                    # Analyze all 85 scraped TVs
-    python spd_analyzer.py --validate-only    # Only validate against ground truth
+    python spd_analyzer.py                       # Default: analyze TVs
+    python spd_analyzer.py --silo tv             # Explicit: analyze TVs
+    python spd_analyzer.py --silo monitor        # Analyze monitors
+    python spd_analyzer.py --validate-only       # Only validate against ground truth
 
 Output:
     - spd_extracted_curves/ folder with verification plots
-    - data/spd_analysis_results.csv with full classification results
+    - data/spd_analysis_results.csv (or monitor equivalent) with classifications
 """
 
+import argparse
 import os
 import sys
 import json
@@ -711,20 +713,32 @@ def match_ground_truth(fullname, brand, lookup):
 IN_CI = bool(os.environ.get("GITHUB_ACTIONS"))
 
 
-def analyze_all_tvs():
-    """Run SPD analysis on all scraped TVs."""
-    # Load scraped data
-    csv_path = DATA_DIR / "rtings_tv_data.csv"
-    if not csv_path.exists():
-        print(f"ERROR: {csv_path} not found. Run rtings_scraper.py first.")
+def analyze_all_products(input_csv: Path | None = None,
+                         output_csv: Path | None = None,
+                         silo_label: str = "TVs"):
+    """Run SPD analysis on all scraped products.
+
+    Args:
+        input_csv: Path to scraped data CSV. Defaults to TV data.
+        output_csv: Path to write results CSV. Defaults to TV results.
+        silo_label: Display label for logging (e.g. "TVs", "Monitors").
+    """
+    # Defaults for backwards compat (TV)
+    if input_csv is None:
+        input_csv = DATA_DIR / "rtings_tv_data.csv"
+    if output_csv is None:
+        output_csv = DATA_DIR / "spd_analysis_results.csv"
+
+    if not input_csv.exists():
+        print(f"ERROR: {input_csv} not found. Run rtings_scraper.py first.")
         return
 
-    df = pd.read_csv(csv_path)
-    print(f"Loaded {len(df)} TVs from scraped data")
+    df = pd.read_csv(input_csv)
+    print(f"Loaded {len(df)} {silo_label} from scraped data")
 
-    # Load ground truth
+    # Load ground truth (TV-only for now; monitors have no GT yet)
     gt_lookup = load_ground_truth()
-    print(f"Ground truth: {len(gt_lookup)} hand-classified TVs")
+    print(f"Ground truth: {len(gt_lookup)} hand-classified products")
 
     CURVES_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -807,14 +821,19 @@ def analyze_all_tvs():
 
     # Save results
     results_df = pd.DataFrame(results)
-    csv_out = DATA_DIR / "spd_analysis_results.csv"
-    results_df.to_csv(csv_out, index=False)
-    print(f"\nResults saved: {csv_out}")
+    results_df.to_csv(output_csv, index=False)
+    print(f"\nResults saved: {output_csv}")
 
     # Print summary
-    print_summary(results_df, match_count, mismatch_count, total_with_gt)
+    print_summary(results_df, match_count, mismatch_count, total_with_gt,
+                  label=silo_label)
 
     return results_df
+
+
+def analyze_all_tvs():
+    """Backwards-compatible wrapper — analyzes TV data."""
+    return analyze_all_products()
 
 
 def _empty_result(row, reason):
@@ -838,16 +857,16 @@ def _empty_result(row, reason):
     }
 
 
-def print_summary(df, matches, mismatches, total_gt):
+def print_summary(df, matches, mismatches, total_gt, label="TVs"):
     """Print classification summary."""
     print("\n" + "=" * 70)
-    print("SPD ANALYSIS SUMMARY")
+    print(f"SPD ANALYSIS SUMMARY — {label}")
     print("=" * 70)
 
     analyzed = df[~df['spd_classification'].isin(['NO_SPD_IMAGE', '']) &
                   ~df['spd_classification'].str.startswith('ERROR')]
 
-    print(f"\n  Total TVs: {len(df)}")
+    print(f"\n  Total {label}: {len(df)}")
     print(f"  Analyzed: {len(analyzed)}")
 
     if total_gt > 0:
@@ -874,7 +893,24 @@ def print_summary(df, matches, mismatches, total_gt):
 
 # ============================================================================
 if __name__ == '__main__':
+    from silo_config import get_silo, SILOS
+
+    parser = argparse.ArgumentParser(description="RTINGS SPD Analyzer")
+    parser.add_argument(
+        "--silo", default="tv", choices=list(SILOS.keys()),
+        help="Product silo to analyze (default: tv)",
+    )
+    args = parser.parse_args()
+
+    silo_cfg = get_silo(args.silo)
+    paths = silo_cfg["paths"]
+
     print("=" * 70)
-    print("RTINGS SPD Analyzer v2 — Calibrated")
+    print(f"RTINGS SPD Analyzer — {silo_cfg['display_name']}")
     print("=" * 70)
-    analyze_all_tvs()
+
+    analyze_all_products(
+        input_csv=paths["scraped_csv"],
+        output_csv=paths["spd_results"],
+        silo_label=silo_cfg["display_name"],
+    )

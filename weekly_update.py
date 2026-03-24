@@ -661,13 +661,20 @@ def run_monitor_pipeline():
         return None, [], errors
 
     # --- Step 2: SPD Analysis ---
-    # TODO(Phase 2b): Run SPD analyzer on monitor data
-    # spd_analyzer.py needs to be parameterized for monitor input/output paths
-    log("Monitor SPD analysis — not yet implemented (Phase 2b)", "WARN")
+    spd_ok = run_script("spd_analyzer.py", abort_on_fail=False,
+                        extra_args=["--silo", "monitor"])
+    if not spd_ok:
+        errors.append("Monitor SPD analyzer failed — using previous classifications")
 
-    # --- Steps 3-4: Schema + Pricing ---
-    # TODO(Phase 2c/2d): build_monitor_schema.py, monitor_pricing_pipeline.py
-    log("Monitor schema/pricing — not yet implemented (Phase 2c/2d)", "WARN")
+    # --- Step 3: Build Schema ---
+    schema_ok = run_script("build_monitor_schema.py", abort_on_fail=False)
+    if not schema_ok:
+        errors.append("Monitor schema build failed")
+
+    # --- Step 4: Pricing Pipeline ---
+    pricing_ok = run_script("monitor_pricing_pipeline.py", abort_on_fail=False)
+    if not pricing_ok:
+        errors.append("Monitor pricing pipeline failed — using stale prices")
 
     # Count products scraped
     scraped_csv = paths["scraped_csv"]
