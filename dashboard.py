@@ -126,18 +126,10 @@ components.html("""
         var node;
         while (node = walker.nextNode()) {
             var t = node.textContent.trim();
-            if (ligatures[t]) {
-                var el = node.parentElement;
-                if (el && !el.getAttribute('data-fixed')) {
-                    el.setAttribute('data-fixed', '1');
-                    el.textContent = '';
-                    var span = doc.createElement('span');
-                    span.textContent = ligatures[t];
-                    span.style.fontSize = '12px';
-                    span.style.color = '#999';
-                    span.style.cursor = 'pointer';
-                    el.appendChild(span);
-                }
+            if (ligatures[t] && !node.parentElement.getAttribute('data-fixed')) {
+                node.parentElement.setAttribute('data-fixed', '1');
+                // Replace only this text node, not the parent's full content
+                node.nodeValue = ligatures[t];
             }
         }
     }
@@ -193,7 +185,7 @@ st.sidebar.divider()
 # --- Product type selector ---
 _product_types = list(PRODUCT_CONFIGS.keys()) + ["All Products"]
 product_type = st.sidebar.radio("Product Type", _product_types,
-                                 index=_product_types.index("All Products"),
+                                 index=0,
                                  key="product_type", horizontal=True)
 _is_blended = product_type == "All Products"
 PCFG = PRODUCT_CONFIGS.get(product_type, PRODUCT_CONFIGS["TVs"])
@@ -367,8 +359,13 @@ else:
     page = st.sidebar.radio("View", ALL_PAGES, index=default_idx)
 
 # --- Version info (bottom of sidebar) ---
-_VERSION = "2.1.0"
+_VERSION = "2.1.1"
 _CHANGELOG_TEXT = """\
+**v2.1.1** \u2014 2026-03-25
+- Fix garbled "What\u2019s new?" expander (ligature JS was clobbering sibling text)
+- Default to TVs view (shows all 6 page tabs) instead of All Products
+- Fix version text invisible on dark theme (color #555 \u2192 #999)
+
 **v2.1.0** \u2014 2026-03-25
 - Cross-project harmonization: Nanosys dark theme tokens, semver versioning, expander changelog
 - Logo assets standardized to assets/ directory (aligned with SKU Tracker)
