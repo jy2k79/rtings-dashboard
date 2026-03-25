@@ -534,6 +534,11 @@ def run_tv_pipeline():
         shutil.copy2(priced_path, old_priced_bak)
 
     # --- Step 1: Scrape RTINGS data ---
+    # Clear stale session flag so a crash leaves "missing" not stale "1"
+    session_flag = DATA / ".session_ok"
+    if session_flag.exists():
+        session_flag.unlink()
+
     try:
         run_script("rtings_scraper.py", abort_on_fail=True,
                     extra_args=["--silo", "tv"])
@@ -560,8 +565,10 @@ def run_tv_pipeline():
         return None, [], [str(e)]
 
     # --- Step 1c: Check session cookie status ---
-    session_flag = DATA / ".session_ok"
-    if session_flag.exists() and session_flag.read_text().strip() == "0":
+    if not session_flag.exists():
+        log("Session flag missing — scraper may have crashed before writing it", "WARN")
+        errors.append("Session flag missing after scraper — check scraper logs")
+    elif session_flag.read_text().strip() == "0":
         log("RTINGS session cookie expired — scores will be blurred", "WARN")
         errors.append("RTINGS session cookie expired — scores/measurements are blurred")
         send_email(
@@ -667,12 +674,23 @@ def run_monitor_pipeline():
     paths = silo_cfg["paths"]
 
     # --- Step 1: Scrape RTINGS monitor data ---
+    monitor_session_flag = paths["session_flag"]
+    if monitor_session_flag.exists():
+        monitor_session_flag.unlink()
+
     try:
         run_script("rtings_scraper.py", abort_on_fail=True,
                     extra_args=["--silo", "monitor"])
     except Exception as e:
         errors.append(f"Monitor scraper failed: {e}")
         return None, [], errors
+
+    if not monitor_session_flag.exists():
+        log("Monitor session flag missing — scraper may have crashed before writing it", "WARN")
+        errors.append("Monitor session flag missing — check scraper logs")
+    elif monitor_session_flag.read_text().strip() == "0":
+        log("RTINGS session cookie expired — monitor scores will be blurred", "WARN")
+        errors.append("RTINGS session cookie expired — monitor scores are blurred")
 
     # --- Step 2: SPD Analysis ---
     spd_ok = run_script("spd_analyzer.py", abort_on_fail=False,
