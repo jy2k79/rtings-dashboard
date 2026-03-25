@@ -44,9 +44,10 @@ def map_backlight_type(rtings_value, panel_type):
 def determine_qd_material(row):
     """Determine quantum dot material from SPD red peak FWHM.
 
-    Two clean clusters in the data with a clear gap at ~30nm:
-      CdSe:        red FWHM 17-28nm (narrow)
-      InP (Cd-Free): red FWHM 34-45nm (wider)
+    Two clean clusters in the data with a gap at ~28-34nm:
+      CdSe:        red FWHM < 28nm (narrow)
+      InP (Cd-Free): red FWHM > 34nm (wider)
+      Unknown:     28-34nm (ambiguous — between clusters)
     """
     color_arch = row['color_architecture']
     if color_arch not in ('QD-LCD', 'QD-OLED'):
@@ -56,14 +57,17 @@ def determine_qd_material(row):
     if color_arch == 'QD-OLED':
         return 'InP'
 
-    # QD-LCD: classify from red FWHM — clean bimodal split at ~30nm
-    CDSE_INP_THRESHOLD = 30  # nm — gap between clusters is 28-34nm
+    # QD-LCD: classify from red FWHM — bimodal split with gap at 28-34nm
+    CDSE_UPPER = 28   # nm — CdSe cluster tops out here
+    INP_LOWER = 34    # nm — InP cluster starts here
     try:
         r_fwhm = float(row.get('red_fwhm_nm', ''))
-        if r_fwhm < CDSE_INP_THRESHOLD:
+        if r_fwhm < CDSE_UPPER:
             return 'CdSe'
-        else:
+        elif r_fwhm > INP_LOWER:
             return 'InP'
+        else:
+            return 'Unknown'
     except (ValueError, TypeError):
         return 'Unknown'
 

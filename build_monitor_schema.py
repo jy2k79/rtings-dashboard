@@ -45,8 +45,9 @@ def determine_qd_material(row):
     """Determine quantum dot material from SPD red peak FWHM.
 
     Same logic as TV schema builder:
-      CdSe:  red FWHM < 30nm
-      InP:   red FWHM >= 30nm
+      CdSe:    red FWHM < 28nm (narrow)
+      InP:     red FWHM > 34nm (wider)
+      Unknown: 28-34nm (ambiguous — between clusters)
       QD-OLED: always InP
     """
     color_arch = row['color_architecture']
@@ -56,13 +57,16 @@ def determine_qd_material(row):
     if color_arch == 'QD-OLED':
         return 'InP'
 
-    CDSE_INP_THRESHOLD = 30
+    CDSE_UPPER = 28   # nm — CdSe cluster tops out here
+    INP_LOWER = 34    # nm — InP cluster starts here
     try:
         r_fwhm = float(row.get('red_fwhm_nm', ''))
-        if r_fwhm < CDSE_INP_THRESHOLD:
+        if r_fwhm < CDSE_UPPER:
             return 'CdSe'
-        else:
+        elif r_fwhm > INP_LOWER:
             return 'InP'
+        else:
+            return 'Unknown'
     except (ValueError, TypeError):
         return 'Unknown'
 
