@@ -58,8 +58,12 @@ Orchestrated by `weekly_update.py`, triggered by `.github/workflows/weekly-updat
 
 ### After Every Push
 After each push to main, always:
-1. Update the kanban board (move completed items to Done, close issues)
-2. Review the board and recommend what to work on next, prioritized by: P0 > P1 > P2 > P3, then by effort (quick wins first within same priority)
+1. **Update the sidebar version + changelog** in `dashboard.py`:
+   - Bump `_VERSION` (semver: patch for fixes, minor for features, major for breaking changes)
+   - Prepend a new entry to `_CHANGELOG_TEXT` with format: `**vX.Y.Z** — YYYY-MM-DD` + bullet points
+   - This is user-facing — the sidebar "What's new?" expander reads from `_CHANGELOG_TEXT`
+2. Update the kanban board (move completed items to Done, close issues)
+3. Review the board and recommend what to work on next, prioritized by: P0 > P1 > P2 > P3, then by effort (quick wins first within same priority)
 
 **Board commands reference:**
 ```bash

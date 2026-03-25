@@ -367,9 +367,19 @@ else:
     page = st.sidebar.radio("View", ALL_PAGES, index=default_idx)
 
 # --- Version info (bottom of sidebar) ---
-_VERSION = "2.0.0"
+_VERSION = "2.1.0"
 _CHANGELOG_TEXT = """\
-**v2.0.0 \u2014 2026-03-24**
+**v2.1.0** \u2014 2026-03-25
+- Cross-project harmonization: Nanosys dark theme tokens, semver versioning, expander changelog
+- Logo assets standardized to assets/ directory (aligned with SKU Tracker)
+- QD export schema contract: SCHEMA_VERSION + EXPORT_COLUMNS validation
+- FWHM CdSe/InP threshold safety margin (28\u201334 nm \u2192 Unknown)
+- Samsung WOLED detection centralized in silo_config.py
+- SPD cache staleness detection via HTTP headers
+- Session cookie expiry hardened with unconditional flag writes
+- Dashboard refactored: 2,730 \u2192 420 lines (extracted views/, src/)
+
+**v2.0.0** \u2014 2026-03-24
 - Monitor support (70 monitors, v2.1.2+)
 - "All Products" cross-product analysis view
 - Master RTINGS Score by technology
@@ -379,7 +389,7 @@ _CHANGELOG_TEXT = """\
 - QD SKU Tracker weekly email export
 - SPD calibration hardening
 
-**v1.0.0 \u2014 2026-02-15**
+**v1.0.0** \u2014 2026-02-15
 - Initial TV dashboard with 85+ TVs
 - SPD-based technology classification
 - Keepa + Best Buy pricing pipeline
@@ -387,7 +397,7 @@ _CHANGELOG_TEXT = """\
 """
 st.sidebar.divider()
 st.sidebar.markdown(
-    f"<p style='text-align:center;color:#555;font-size:0.8em;margin-bottom:2px'>Version {_VERSION}</p>",
+    f"<p style='text-align:center;color:#999;font-size:0.8em;margin-bottom:2px'>Version {_VERSION}</p>",
     unsafe_allow_html=True,
 )
 with st.sidebar.expander("What's new?"):
