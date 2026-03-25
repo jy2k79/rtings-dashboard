@@ -184,6 +184,33 @@ product_type = st.sidebar.radio("Product Type", _product_types,
 _is_blended = product_type == "All Products"
 PCFG = PRODUCT_CONFIGS.get(product_type, PRODUCT_CONFIGS["TVs"])
 _screen_area_map = get_screen_area_map(product_type)
+
+# Page navigation with Material icons (aligned with SKU Tracker)
+# Lambdas capture fdf/tdf/PCFG etc. by reference — resolved when pg.run() is called below.
+_profile_icon = ":material/tv:" if product_type == "TVs" else ":material/desktop_windows:"
+if _is_blended:
+    _nav_pages = [
+        st.Page(lambda: cross_product.render(df),
+                title="Cross-Product Analysis", icon=":material/compare_arrows:"),
+    ]
+else:
+    _nav_pages = [
+        st.Page(lambda: overview.render(fdf, PCFG, product_type=product_type, df=df),
+                title="Overview", icon=":material/bar_chart:"),
+        st.Page(lambda: tech_explorer.render(fdf, PCFG),
+                title="Technology Explorer", icon=":material/science:"),
+        st.Page(lambda: price_analyzer.render(fdf, PCFG, history_df=history_df,
+                                               prices_df=prices_df, selected_techs=selected_techs),
+                title="Price Analyzer", icon=":material/attach_money:"),
+        st.Page(lambda: temporal.render(tdf, PCFG),
+                title="Temporal Analysis", icon=":material/calendar_month:"),
+        st.Page(lambda: comparison.render(fdf, PCFG),
+                title="Comparison Tool", icon=":material/compare:"),
+        st.Page(lambda: profiles.render(fdf, PCFG, prices_df=prices_df),
+                title=PCFG["profile_page"], icon=_profile_icon),
+    ]
+pg = st.navigation(_nav_pages, position="sidebar")
+
 st.sidebar.divider()
 
 # Load data for selected product type
@@ -342,36 +369,11 @@ if _n_woled_excluded > 0:
 if caveats:
     st.sidebar.caption(" \u00b7 ".join(caveats))
 
-# Support deep-linking via ?page=...
-# Icons aligned with SKU Tracker where pages overlap (Overview, Pricing, Temporal)
-_PAGE_ICONS = {
-    "Overview": "\U0001f4ca",            # bar chart (matches SKU Tracker Home)
-    "Technology Explorer": "\U0001f52c",  # microscope
-    "Price Analyzer": "\U0001f4b0",       # money bag (matches SKU Tracker Pricing)
-    "Temporal Analysis": "\U0001f4c5",    # calendar (matches SKU Tracker Seasonality)
-    "Comparison Tool": "\u2696\ufe0f",    # balance scale
-    "TV Profiles": "\U0001f4fa",          # television
-    "Monitor Profiles": "\U0001f5a5\ufe0f",  # desktop computer
-    "Cross-Product Analysis": "\U0001f4c8",  # chart increasing
-}
-
-if _is_blended:
-    ALL_PAGES = ["Cross-Product Analysis"]
-    page = "Cross-Product Analysis"
-else:
-    ALL_PAGES = ["Overview", "Technology Explorer", "Price Analyzer", "Temporal Analysis", "Comparison Tool", PCFG["profile_page"]]
-    qp_page = st.query_params.get("page", None)
-    default_idx = ALL_PAGES.index(qp_page) if qp_page in ALL_PAGES else 0
-    page = st.sidebar.radio(
-        "View", ALL_PAGES, index=default_idx,
-        format_func=lambda p: f"{_PAGE_ICONS.get(p, '')}  {p}",
-    )
-
 # --- Version info (bottom of sidebar) ---
-_VERSION = "2.1.4"
+_VERSION = "2.2.0"
 _CHANGELOG_TEXT = """\
-**v2.1.4** \u2014 2026-03-25
-- Page navigation icons aligned with SKU Tracker (Overview, Pricing, Temporal, etc.)
+**v2.2.0** \u2014 2026-03-25
+- Material Design page navigation icons (st.navigation) matching SKU Tracker style
 
 **v2.1.3** \u2014 2026-03-25
 - Fix garbled expander icons: CSS font override was too broad ([class*="st-"] \u2192 [class*="css"]), overriding Material Symbols icon font
@@ -416,26 +418,6 @@ with st.sidebar.expander("What's new?"):
 
 
 # ============================================================================
-# PAGE ROUTING
+# PAGE ROUTING — st.navigation() handles selection, pg.run() executes
 # ============================================================================
-if page == "Overview":
-    overview.render(fdf, PCFG, product_type=product_type, df=df)
-
-elif page == "Technology Explorer":
-    tech_explorer.render(fdf, PCFG)
-
-elif page == "Price Analyzer":
-    price_analyzer.render(fdf, PCFG, history_df=history_df, prices_df=prices_df,
-                          selected_techs=selected_techs)
-
-elif page == "Temporal Analysis":
-    temporal.render(tdf, PCFG)
-
-elif page == "Comparison Tool":
-    comparison.render(fdf, PCFG)
-
-elif page == PCFG["profile_page"]:
-    profiles.render(fdf, PCFG, prices_df=prices_df)
-
-elif page == "Cross-Product Analysis":
-    cross_product.render(df)
+pg.run()
