@@ -60,7 +60,7 @@ PRODUCT_CONFIGS = {
         "profile_page": "Monitor Profiles",
         "extra_score_cols": ["brightness_score", "color_accuracy"],
         "advantage_metrics": [
-            ("hdr_peak_2pct_nits", "HDR Peak Brightness\n(2%, nits)"),
+            ("hdr_peak_10pct_nits", "HDR Peak Brightness\n(10%, nits)"),
             ("hdr_bt2020_coverage_itp_pct", "HDR BT.2020 Coverage\n(ITP %)"),
             ("sdr_dci_p3_coverage_pct", "SDR DCI-P3 Coverage\n(%)"),
             ("total_response_time_ms", "Total Response Time\n(ms)"),
