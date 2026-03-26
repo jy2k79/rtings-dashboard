@@ -10,7 +10,7 @@ snapshot_date,product_id,size_inches,best_price,price_source,color_architecture
 2026-03-23,40848,27.0,304.98,amazon_3p,KSF
 2026-03-23,40717,32.0,565.46,amazon,KSF
 2026-03-23,40716,27.0,772.32,amazon_3p,KSF
-2026-03-23,39860,27.0,584.99,rtings,WLED
+2026-03-23,39860,27.0,584.99,rtings,QD-LCD
 2026-03-23,41927,27.0,309.99,amazon_3p,KSF
 2026-03-23,37854,57.0,1580.21,amazon,QD-LCD
 2026-03-23,38128,27.0,349.0,amazon,KSF

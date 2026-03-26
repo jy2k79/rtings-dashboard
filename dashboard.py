@@ -367,8 +367,12 @@ else:
     )
 
 # --- Version info (bottom of sidebar) ---
-_VERSION = "2.3.0"
+_VERSION = "2.3.1"
 _CHANGELOG_TEXT = """\
+**v2.3.1** \u2014 2026-03-26
+- Fix stale WLED in monitor price history (Acer Nitro XV275K P3, reclassified to QD-LCD in cec36d7)
+- Both pricing pipelines now refresh stale color_architecture labels on every run
+
 **v2.3.0** \u2014 2026-03-25
 - Monitor-specific QD Advantage metrics: HDR Peak (10%), BT.2020, Response Time, Brightness, Input Lag, Console Gaming
 - Per-product-type advantage_metrics config in PRODUCT_CONFIGS

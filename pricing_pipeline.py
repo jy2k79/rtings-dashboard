@@ -779,6 +779,9 @@ def append_price_history(prices_df, tv_db):
 
     if history_path.exists():
         existing = pd.read_csv(history_path)
+        # Refresh stale color_architecture labels using current database
+        existing['product_id'] = existing['product_id'].astype(str)
+        existing['color_architecture'] = existing['product_id'].map(tech_map)
         combined = pd.concat([existing, snapshot], ignore_index=True)
         combined.drop_duplicates(
             subset=['snapshot_date', 'product_id', 'size_inches'],
