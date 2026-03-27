@@ -492,7 +492,7 @@ def fetch_bestbuy_prices(retailer_df, output_path=None):
     with httpx.Client(timeout=30) as client:
         for i in range(0, len(skus), batch_size):
             batch = skus[i:i + batch_size]
-            sku_filter = "|".join(f"sku={s}" for s in batch)
+            sku_filter = "sku in(" + ",".join(str(s) for s in batch) + ")"
 
             try:
                 resp = client.get(
