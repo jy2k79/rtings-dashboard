@@ -241,7 +241,7 @@
     "published_product_recommendation_count": 2,
     "status_discussion": {
       "url": "/discussions/FXLqgJh5LKKq9XOq/review-updates-asus-rog-strix-oled-xg32ucwmg",
-      "user_comments_count": 100
+      "user_comments_count": 101
     }
   },
   {
@@ -277,41 +277,6 @@
     "status_discussion": {
       "url": "/discussions/pzBCKUxTWbQEvMQx/review-updates-dell-alienware-aw3425dwm",
       "user_comments_count": 54
-    }
-  },
-  {
-    "id": "46678",
-    "fullname": "Dell Alienware AW2725DF",
-    "full_url_part": "dell-alienware-aw2725df",
-    "url_part": "alienware-aw2725df",
-    "brand_name": "Dell",
-    "published": true,
-    "reviewed_sku_id": "10003",
-    "approximate_released_at": "2024-01-01 00:00:00 -0500",
-    "last_updated_at": "2026-03-17 13:18:49 -0400",
-    "review": {
-      "test_bench": {
-        "id": "238",
-        "display_name": "v2.1.2"
-      }
-    },
-    "image": "https://i.rtings.com/assets/products/2vl7SnXp/dell-alienware-aw2725df/design-small.jpg?format=auto",
-    "variant_skus": [
-      {
-        "id": "10003",
-        "name": "Alienware AW2725DF",
-        "variation": "27\""
-      }
-    ],
-    "page": {
-      "url": "/monitor/reviews/dell/alienware-aw2725df",
-      "early_access": false,
-      "first_published_at": "2024-03-13 13:33:51 -0400"
-    },
-    "published_product_recommendation_count": 7,
-    "status_discussion": {
-      "url": "/discussions/bqeQZD4NykzU8tJe/review-updates-dell-alienware-aw2725df",
-      "user_comments_count": 234
     }
   },
   {
@@ -451,7 +416,7 @@
     "published_product_recommendation_count": 1,
     "status_discussion": {
       "url": "/discussions/1kivR9ENtwte_Jo3/review-updates-msi-mpg-274urdfw-e16m",
-      "user_comments_count": 138
+      "user_comments_count": 137
     }
   },
   {
@@ -1131,7 +1096,7 @@
     "published_product_recommendation_count": 0,
     "status_discussion": {
       "url": "/discussions/8izP13QJ4n0-g1SJ/review-updates-gigabyte-aorus-fo32u2p",
-      "user_comments_count": 112
+      "user_comments_count": 121
     }
   },
   {
@@ -1621,7 +1586,7 @@
     "published_product_recommendation_count": 3,
     "status_discussion": {
       "url": "/discussions/uKs97OdnOa7D7dS4/review-updates-samsung-odyssey-oled-g9-g95sc",
-      "user_comments_count": 116
+      "user_comments_count": 119
     }
   },
   {
@@ -1761,7 +1726,7 @@
     "published_product_recommendation_count": 7,
     "status_discussion": {
       "url": "/discussions/0mkmeVz6r88HeBN0/review-updates-dell-s3225qc",
-      "user_comments_count": 35
+      "user_comments_count": 39
     }
   },
   {
@@ -2038,7 +2003,7 @@
       "early_access": false,
       "first_published_at": "2024-05-03 13:01:50 -0400"
     },
-    "published_product_recommendation_count": 3,
+    "published_product_recommendation_count": 2,
     "status_discussion": {
       "url": "/discussions/psgRQ3Z9D6VwwkkQ/review-updates-dell-d",
       "user_comments_count": 95
@@ -2217,6 +2182,56 @@
     "status_discussion": {
       "url": "/discussions/85hzo4bx-Wq9TTsc/review-updates-dell-s2725qs",
       "user_comments_count": 15
+    }
+  },
+  {
+    "id": "133968",
+    "fullname": "Apple Studio Display XDR",
+    "full_url_part": "apple-studio-display-xdr",
+    "url_part": "studio-display-xdr",
+    "brand_name": "Apple",
+    "published": false,
+    "reviewed_sku_id": "16485",
+    "approximate_released_at": "2026-03-11 00:00:00 -0400",
+    "last_updated_at": "2026-04-09 08:04:44 -0400",
+    "review": {
+      "test_bench": {
+        "id": "238",
+        "display_name": "v2.1.2"
+      }
+    },
+    "image": "https://i.rtings.com/assets/products/7wFHQGF7/apple-studio-display-xdr/in-test-small.jpg?format=auto",
+    "variant_skus": [
+      {
+        "id": "16483",
+        "name": "Studio Display XDR",
+        "variation": "27\" - Nano-texture glass/Tilt- and height-adjustable stand"
+      },
+      {
+        "id": "16482",
+        "name": "Studio Display XDR",
+        "variation": "27\" - Nano-texture glass/VESA mount adapter"
+      },
+      {
+        "id": "16485",
+        "name": "Studio Display XDR",
+        "variation": "27\" - Standard glass/Tilt- and height-adjustable stand"
+      },
+      {
+        "id": "16484",
+        "name": "Studio Display XDR",
+        "variation": "27\" - Standard glass/VESA mount adapter"
+      }
+    ],
+    "page": {
+      "url": "/early-access/monitor/reviews/apple/studio-display-xdr",
+      "early_access": true,
+      "first_published_at": null
+    },
+    "published_product_recommendation_count": null,
+    "status_discussion": {
+      "url": "/discussions/5_znTnMpujscDmrk/review-updates-apple-studio-display-xdr",
+      "user_comments_count": 25
     }
   },
   {
@@ -3201,7 +3216,7 @@
     "published_product_recommendation_count": null,
     "status_discussion": {
       "url": "/discussions/1zkIhrNsClb7DvwA/review-updates-apple-studio-display-2026",
-      "user_comments_count": 5
+      "user_comments_count": 6
     }
   },
   {
@@ -3407,6 +3422,41 @@
     "status_discussion": {
       "url": "/discussions/g9euO8hTT4tet7lB/review-updates-asus-rog-strix-oled-xg27aqdmg",
       "user_comments_count": 371
+    }
+  },
+  {
+    "id": "46678",
+    "fullname": "Dell Alienware AW2725DF",
+    "full_url_part": "dell-alienware-aw2725df",
+    "url_part": "alienware-aw2725df",
+    "brand_name": "Dell",
+    "published": true,
+    "reviewed_sku_id": "10003",
+    "approximate_released_at": "2024-01-01 00:00:00 -0500",
+    "last_updated_at": "2026-04-08 14:36:02 -0400",
+    "review": {
+      "test_bench": {
+        "id": "238",
+        "display_name": "v2.1.2"
+      }
+    },
+    "image": "https://i.rtings.com/assets/products/2vl7SnXp/dell-alienware-aw2725df/design-small.jpg?format=auto",
+    "variant_skus": [
+      {
+        "id": "10003",
+        "name": "Alienware AW2725DF",
+        "variation": "27\""
+      }
+    ],
+    "page": {
+      "url": "/monitor/reviews/dell/alienware-aw2725df",
+      "early_access": false,
+      "first_published_at": "2024-03-13 13:33:51 -0400"
+    },
+    "published_product_recommendation_count": 7,
+    "status_discussion": {
+      "url": "/discussions/bqeQZD4NykzU8tJe/review-updates-dell-alienware-aw2725df",
+      "user_comments_count": 234
     }
   }
 ]
