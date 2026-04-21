@@ -16,8 +16,12 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.4.0"
+VERSION = "2.4.1"
 CHANGELOG = """\
+**v2.4.1** \u2014 2026-04-21
+- Data refresh with restored RTINGS session: 90 TVs, 1 new, 110 score/classification changes unblurred, 78 priced
+- Safari-specific cookie refresh playbook in CLAUDE.md + expiry notification email (HttpOnly caveat documented)
+
 **v2.4.0** \u2014 2026-03-26
 - Extract sidebar into src/sidebar.py (aligned with SKU Tracker pattern). Closes #42
 
