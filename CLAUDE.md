@@ -123,6 +123,26 @@ streamlit run dashboard.py
 | `RTINGS_SESSION` | GitHub Secrets + `.env` | RTINGS member cookie (`_rtings_session`), ~30 day expiry |
 | `app_password` | Streamlit Secrets | Dashboard login (`nanosys2026`) |
 
+### Refreshing the RTINGS session cookie (Safari)
+The pipeline emails **"ACTION REQUIRED: RTINGS Session Expired"** when the cookie
+lapses (ratings come back blurred). Refresh procedure:
+
+1. Log into [rtings.com](https://www.rtings.com/login) — confirm the top-right shows the username
+2. One-time Safari setup (skip if done): **Safari → Settings → Advanced → ☑️ Show features for web developers**
+3. Right-click page → **Inspect Element** → DevTools top bar **Storage** (Safari) or **Application** (Chrome/Edge/Brave)
+4. Left sidebar: **Cookies → `https://www.rtings.com`** → find row `_rtings_session`
+5. Double-click the **Value** cell → copy the entire URL-encoded blob (~1100 chars, ends in `--...==`)
+6. Paste into two places:
+   - `.env` line 4 (`RTINGS_SESSION=...`) for local runs
+   - [GitHub secret `RTINGS_SESSION`](https://github.com/jy2k79/tv-tech-dashboard/settings/secrets/actions) for weekly CI
+
+**Do not try `document.cookie` in the JS console** — `_rtings_session` is HttpOnly,
+so it's invisible to JavaScript. Storage/Application panel is the only way.
+
+Verify by running `python rtings_scraper.py --silo tv`. Expected output:
+`Session OK: N/N ratings unblurred`. If all ratings are blurred, the cookie is
+still bad (wrong value pasted, or account not logged in).
+
 ## Common Pitfalls
 - Dashboard reads `tv_database_with_prices.csv`, NOT `tv_database.csv` — must regenerate after schema changes
 - SPD images are cached in CI — stale cache can mask classification changes
