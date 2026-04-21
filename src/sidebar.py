@@ -16,8 +16,12 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.4.2"
+VERSION = "2.4.3"
 CHANGELOG = """\
+**v2.4.3** \u2014 2026-04-21
+- Fix SPD analyzer timeout on monitor silo (#48): skip matplotlib plot_verification in pipeline runs via SKIP_SPD_PLOTS env var; raise script timeout 20\u201440 min
+- Monitor SPD reclassification after fresh analysis: 40 KSF (new), 20 QD-OLED, 18 WOLED, 14 QD-LCD, 3 Pseudo QD, 2 WLED (previously stuck on stale labels with 0 KSF / 0 WLED)
+
 **v2.4.2** \u2014 2026-04-21
 - Monitor data refresh with restored session: 97 monitors, pc_gaming/console_gaming/office/editing scores unblurred (were all NULL), 79 priced
 

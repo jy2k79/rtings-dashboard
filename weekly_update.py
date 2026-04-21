@@ -50,19 +50,26 @@ def log(msg, level="INFO"):
     print(f"[{ts}] {level}: {msg}", flush=True)
 
 
-def run_script(name, abort_on_fail=True, extra_args=None):
+SCRIPT_TIMEOUT_SEC = 2400  # 40 min cap per script
+
+
+def run_script(name, abort_on_fail=True, extra_args=None, extra_env=None):
     """Run a Python script in the project root. Returns True on success."""
     path = ROOT / name
     cmd = [sys.executable, str(path)]
     if extra_args:
         cmd.extend(extra_args)
     log(f"Running {' '.join(cmd[1:])}...")
+    env = os.environ.copy()
+    if extra_env:
+        env.update(extra_env)
     try:
         result = subprocess.run(
             cmd,
             cwd=str(ROOT),
             capture_output=False,
-            timeout=1200,  # 20 minute timeout per script
+            timeout=SCRIPT_TIMEOUT_SEC,
+            env=env,
         )
         if result.returncode != 0:
             log(f"{name} exited with code {result.returncode}", "ERROR")
@@ -72,7 +79,7 @@ def run_script(name, abort_on_fail=True, extra_args=None):
         log(f"{name} completed successfully")
         return True
     except subprocess.TimeoutExpired:
-        log(f"{name} timed out after 20 minutes", "ERROR")
+        log(f"{name} timed out after {SCRIPT_TIMEOUT_SEC // 60} minutes", "ERROR")
         if abort_on_fail:
             raise
         return False
@@ -595,7 +602,8 @@ def run_tv_pipeline():
         )
 
     # --- Step 2: SPD Analysis ---
-    spd_ok = run_script("spd_analyzer.py", abort_on_fail=False)
+    spd_ok = run_script("spd_analyzer.py", abort_on_fail=False,
+                        extra_env={"SKIP_SPD_PLOTS": "1"})
     if not spd_ok:
         errors.append("SPD analyzer failed — using previous classifications")
 
@@ -698,7 +706,8 @@ def run_monitor_pipeline():
 
     # --- Step 2: SPD Analysis ---
     spd_ok = run_script("spd_analyzer.py", abort_on_fail=False,
-                        extra_args=["--silo", "monitor"])
+                        extra_args=["--silo", "monitor"],
+                        extra_env={"SKIP_SPD_PLOTS": "1"})
     if not spd_ok:
         errors.append("Monitor SPD analyzer failed — using previous classifications")
 

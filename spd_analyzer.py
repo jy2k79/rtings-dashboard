@@ -720,6 +720,7 @@ def match_ground_truth(fullname, brand, lookup):
 # MAIN ANALYSIS PIPELINE
 # ============================================================================
 IN_CI = bool(os.environ.get("GITHUB_ACTIONS"))
+SKIP_PLOTS = IN_CI or bool(os.environ.get("SKIP_SPD_PLOTS"))
 
 
 def analyze_all_products(input_csv: Path | None = None,
@@ -795,8 +796,8 @@ def analyze_all_products(input_csv: Path | None = None,
             print(f" -> {analysis['classification']} ({analysis['confidence']})"
                   f"{' [' + match_status + ']' if gt_tech else ''}")
 
-            # Generate verification plot (skip on CI to save time)
-            if not IN_CI:
+            # Generate verification plot (skip on CI or when SKIP_SPD_PLOTS=1)
+            if not SKIP_PLOTS:
                 safe_name = row['url_part'].replace('/', '-')
                 plot_path = CURVES_DIR / f"{safe_name}_spd_analysis.png"
                 plot_verification(wavelengths, intensities, analysis, fullname,
