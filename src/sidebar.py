@@ -16,8 +16,12 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.4.5"
+VERSION = "2.4.6"
 CHANGELOG = """\
+**v2.4.6** \u2014 2026-04-22
+- SPD analyzer: pick the integrated-area-dominant peak per band (intensity \u00d7 FWHM) instead of max-intensity. Fixes KSF monitors whose "green" was picked as a 547nm JPEG gridline artifact (10nm FWHM, intensity 0.73) beating the real \u03b2-SiAlON phosphor (45nm FWHM, intensity 0.55). Physically correct metric; red stays intensity-based so narrow KSF Mn\u2074\u207a lines win.
+- Monitor KSF green FWHM now 24\u201364nm (was 3\u201364nm with bimodal artifact cluster at 3\u201312nm). Dashboard "Green Peak FWHM by Technology" shows correct distribution.
+
 **v2.4.5** \u2014 2026-04-22
 - SPD analyzer: drop sub-2nm FWHM artifacts (JPEG gridlines/compression spikes that appeared as 0\u20131nm "peaks" in verification plots). Real LED/QD peaks are all >10nm; no classifications change.
 

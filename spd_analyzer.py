@@ -425,9 +425,22 @@ def analyze_spd(wavelengths, intensities, panel_type='', panel_sub_type=''):
     green_peaks = [p for p in peak_data if 500 <= p['wavelength'] <= 575]
     red_peaks = [p for p in peak_data if 590 <= p['wavelength'] <= 680]
 
-    blue = max(blue_peaks, key=lambda p: p['intensity']) if blue_peaks else None
-    green = max(green_peaks, key=lambda p: p['intensity']) if green_peaks else None
-    red = max(red_peaks, key=lambda p: p['intensity']) if red_peaks else None
+    # Pick the dominant peak per band. In blue/green, score by integrated area
+    # (intensity * FWHM) so real broad phosphors (e.g. KSF β-SiAlON green
+    # ~525nm/45nm/0.55 → area 25) beat narrow JPEG gridline artifacts (e.g.
+    # 547nm spike ~10nm/0.73 → area 7) that would otherwise win on peak
+    # intensity alone. Red uses intensity so narrow KSF Mn4+ lines (5-10nm)
+    # remain the dominant pick over any weaker broad red humps.
+    def _pick_dominant(peaks, score_by='area'):
+        if not peaks:
+            return None
+        if score_by == 'area':
+            return max(peaks, key=lambda p: p['intensity'] * p['fwhm_nm'])
+        return max(peaks, key=lambda p: p['intensity'])
+
+    blue = _pick_dominant(blue_peaks, score_by='area')
+    green = _pick_dominant(green_peaks, score_by='area')
+    red = _pick_dominant(red_peaks, score_by='intensity')
 
     classification, confidence, notes = classify_spd(
         peak_data, blue, green, red, panel_type, panel_sub_type
