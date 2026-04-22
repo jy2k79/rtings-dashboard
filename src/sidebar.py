@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.4.4"
+VERSION = "2.4.5"
 CHANGELOG = """\
+**v2.4.5** \u2014 2026-04-22
+- SPD analyzer: drop sub-2nm FWHM artifacts (JPEG gridlines/compression spikes that appeared as 0\u20131nm "peaks" in verification plots). Real LED/QD peaks are all >10nm; no classifications change.
+
 **v2.4.4** \u2014 2026-04-22
 - Guard Tech Explorer correlation chart against empty data (crashed with KeyError when scores were all-null, e.g. during cookie expiry)
 

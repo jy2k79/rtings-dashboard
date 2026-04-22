@@ -67,6 +67,11 @@ WL_MAX = 750
 NARROW_FWHM = 40     # QD peaks are < 40nm (raised from 35 to capture InP QD + QD-OLED red)
 BROAD_FWHM = 55       # WOLED/WLED phosphor humps > 55nm
 
+# RTINGS spectrometer resolution is ~5nm; any measured FWHM below this floor
+# is a JPEG artifact (gridlines, compression spikes), not a real emission peak.
+# Real LED/phosphor/QD peaks are all >10nm. Drop peaks with FWHM below this.
+MIN_PEAK_FWHM_NM = 2.0
+
 # Output directories
 CURVES_DIR = Path("spd_extracted_curves")
 DATA_DIR = Path("data")
@@ -408,6 +413,12 @@ def analyze_spd(wavelengths, intensities, panel_type='', panel_sub_type=''):
             'asymmetry': asymmetry,
             'index': idx,
         })
+
+    # Drop sub-resolution artifact spikes (JPEG gridlines / compression noise).
+    # Real emission peaks are all wider than MIN_PEAK_FWHM_NM; narrower "peaks"
+    # are single-pixel features from the source image, not spectral content.
+    peak_data = [p for p in peak_data
+                 if p['fwhm_nm'] is not None and p['fwhm_nm'] >= MIN_PEAK_FWHM_NM]
 
     # Categorize by spectral band
     blue_peaks = [p for p in peak_data if 420 <= p['wavelength'] <= 490]
