@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.5.1"
+VERSION = "2.5.2"
 CHANGELOG = """\
+**v2.5.2** \u2014 2026-04-23
+- Move "QD ZONE" label above the top edge of the scatter plot so it no longer crowds the data points in the upper-left corner.
+
 **v2.5.1** \u2014 2026-04-23
 - Tighten QD ZONE box on the SPD gamut scatter: FWHM < 30 nm, Rec.2020 > 40%. Matches the physical boundary where quantum-dot emitters separate from phosphor/KSF.
 
