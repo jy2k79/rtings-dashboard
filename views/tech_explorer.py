@@ -53,12 +53,12 @@ def render(fdf, pcfg):
             labels={"green_fwhm_nm": "Green FWHM (nm)",
                     "hdr_bt2020_coverage_itp_pct": "Rec.2020 Coverage (%)"},
         )
-        fig.add_shape(type="rect", x0=19, x1=41, y0=42, y1=74,
+        fig.add_shape(type="rect", x0=20, x1=30, y0=40, y1=75,
                       line=dict(color="rgba(255,0,159,0.5)", dash="dash"),
                       fillcolor="rgba(255,0,159,0.06)")
-        fig.add_annotation(x=30, y=71, text="<b>QD ZONE</b>", showarrow=False,
+        fig.add_annotation(x=25, y=72, text="<b>QD ZONE</b>", showarrow=False,
                            font=dict(color="rgba(255,0,159,0.9)", size=14))
-        fig.add_annotation(x=30, y=67, text="narrow emission \u00b7 wide gamut",
+        fig.add_annotation(x=25, y=68, text="narrow emission \u00b7 wide gamut",
                            showarrow=False,
                            font=dict(color="rgba(255,0,159,0.7)", size=11))
         fig.update_traces(marker=MARKER)

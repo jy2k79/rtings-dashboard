@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.5.0"
+VERSION = "2.5.1"
 CHANGELOG = """\
+**v2.5.1** \u2014 2026-04-23
+- Tighten QD ZONE box on the SPD gamut scatter: FWHM < 30 nm, Rec.2020 > 40%. Matches the physical boundary where quantum-dot emitters separate from phosphor/KSF.
+
 **v2.5.0** \u2014 2026-04-23
 - New lead chart on Technology Explorer \u2192 SPD Analysis tab: Green FWHM vs Rec.2020 Coverage scatter. Closes the loop between spectral purity and the consumer-visible outcome (color gamut). QD techs cluster in a magenta "QD ZONE" (narrow emission, wide gamut). Closes #49.
 
