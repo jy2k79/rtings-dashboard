@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.6.5"
+VERSION = "2.6.6"
 CHANGELOG = """\
+**v2.6.6** \u2014 2026-04-27
+- Loosen InP QD-LCD asymmetric branch (G<38 & R<48) so the LG QNED90T (G:36.6, R:44.8) is recognized as InP QD-LCD instead of Pseudo QD. Empirical guardrail: genuine Pseudo-QD/phosphor sets all sit at red FWHM > 50nm (Samsung Q60D/Q70D/Q80D/Frame 2024), so the new ceiling cleanly separates the two.
+
 **v2.6.5** \u2014 2026-04-27
 - "Composition over time" chart switched from discrete stacked bars to a stacked step-area (line_shape=hv) so the picks held by one snapshot fill the gap until the next snapshot. The WOLED slice now shows clearly as a continuous band from 2025-07-17 through 2025-10-26 instead of just on the snapshot dates.
 

@@ -534,10 +534,14 @@ def classify_spd(all_peaks, blue, green, red, panel_type='', panel_sub_type=''):
         return 'QD-LCD', 'high', '; '.join(notes)
 
     # QD-LCD asymmetric: one clearly narrow peak + the other borderline.
-    # Catches InP QD sets where red can be wider (e.g., LG QNED90T: G:34.7, R:41.2).
+    # Catches InP QD sets where red can run wider than the strict <40nm
+    # threshold (LG QNED90T: G:36.6, R:44.8). The empirical guardrail is
+    # that genuine Pseudo QD / phosphor sets have red FWHM > 50nm
+    # (Samsung Q60D/Q70D/Q80D/Frame 2024 all sit at R=52-61nm), so a 48nm
+    # ceiling here cleanly separates InP QD from phosphor red.
     if (green and red
-            and ((green_fwhm < 36 and red_fwhm < 45)
-                 or (red_fwhm < 36 and green_fwhm < 45))):
+            and ((green_fwhm < 38 and red_fwhm < 48)
+                 or (red_fwhm < 38 and green_fwhm < 48))):
         return 'QD-LCD', 'medium', '; '.join(notes) + '; asymmetric QD peaks'
 
     # --- Pseudo QD ---
