@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.6.2"
+VERSION = "2.6.3"
 CHANGELOG = """\
+**v2.6.3** \u2014 2026-04-27
+- Collapse Notable Mentions table into a closed-by-default expander, matching the Composition over time pattern. The mentions toggle still works independently for the pie chart scope.
+
 **v2.6.2** \u2014 2026-04-27
 - TV Overview: move Best-Of section below the hero charts (Tech Cost per m\u00b2 + primary score) so it doesn't push them down. Replace the side bar charts with a single donut chart + toggle for including notable mentions. Tables stack on the left.
 

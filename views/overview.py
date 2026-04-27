@@ -309,12 +309,13 @@ def _render_best_of_section(df_full: pd.DataFrame) -> None:
                      use_container_width=True, hide_index=True, height=240)
 
         if not mentions.empty:
-            st.markdown("**Notable mentions**")
-            mdisplay = mentions.rename(columns={"fullname": "TV"})
-            mdisplay["Tech"] = mdisplay["color_architecture"].fillna("\u2014")
-            mdisplay["#"] = mdisplay["rank"].astype(int)
-            st.dataframe(mdisplay[["#", "TV", "Tech"]],
-                         use_container_width=True, hide_index=True, height=240)
+            with st.expander("Notable mentions", expanded=False):
+                mdisplay = mentions.rename(columns={"fullname": "TV"})
+                mdisplay["Tech"] = mdisplay["color_architecture"].fillna("\u2014")
+                mdisplay["#"] = mdisplay["rank"].astype(int)
+                st.dataframe(mdisplay[["#", "TV", "Tech"]],
+                             use_container_width=True, hide_index=True,
+                             height=240)
 
     with chart_col:
         st.markdown("**Tech share**")
