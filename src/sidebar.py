@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.6.6"
+VERSION = "2.6.7"
 CHANGELOG = """\
+**v2.6.7** \u2014 2026-04-27
+- Reverse the QNED90T classification: hybrid stacks (green-only QD + broad phosphor red) are Pseudo QD, not QD-LCD. Removed the "asymmetric QD" branch \u2014 QD-LCD now strictly requires both green AND red narrow. Added 1nm tolerance on the red ceiling so borderline-narrow QD reds (Samsung 100QN80F R:40.4) stay with the QN family. Net: only QNED90T moves back to Pseudo QD.
+
 **v2.6.6** \u2014 2026-04-27
 - Loosen InP QD-LCD asymmetric branch (G<38 & R<48) so the LG QNED90T (G:36.6, R:44.8) is recognized as InP QD-LCD instead of Pseudo QD. Empirical guardrail: genuine Pseudo-QD/phosphor sets all sit at red FWHM > 50nm (Samsung Q60D/Q70D/Q80D/Frame 2024), so the new ceiling cleanly separates the two.
 

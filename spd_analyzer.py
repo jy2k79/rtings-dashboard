@@ -525,24 +525,29 @@ def classify_spd(all_peaks, blue, green, red, panel_type='', panel_sub_type=''):
         return 'KSF', 'medium', '; '.join(notes) + '; narrow red suggests KSF'
 
     # --- QD-LCD ---
-    # Narrow green AND narrow red (both < 40nm).
+    # Both green AND red must be narrow (QD-like emission on both channels).
+    # Hybrids — narrow green QD + broad phosphor red — are Pseudo QD per
+    # Nanosys: partial QD content is not full QD-LCD.
     # CdSe QDs: green 22-25nm, red 19-27nm (very narrow)
-    # InP QDs: green 33-36nm, red 35-37nm (wider but still < 40nm)
+    # InP QDs:  green 33-36nm, red 35-39nm (wider but still narrow)
+    # 1nm tolerance on top of NARROW_FWHM=40 lets borderline measurements
+    # like Samsung 100QN80F (R:40.4) stay with the rest of the Samsung
+    # QN family without admitting clearly-broader hybrids like LG QNED90T
+    # (R:44.8 → still Pseudo QD).
+    QD_RED_CEILING = NARROW_FWHM + 1
     if (green and red
             and green_fwhm < NARROW_FWHM
-            and red_fwhm < NARROW_FWHM):
+            and red_fwhm < QD_RED_CEILING):
         return 'QD-LCD', 'high', '; '.join(notes)
 
-    # QD-LCD asymmetric: one clearly narrow peak + the other borderline.
-    # Catches InP QD sets where red can run wider than the strict <40nm
-    # threshold (LG QNED90T: G:36.6, R:44.8). The empirical guardrail is
-    # that genuine Pseudo QD / phosphor sets have red FWHM > 50nm
-    # (Samsung Q60D/Q70D/Q80D/Frame 2024 all sit at R=52-61nm), so a 48nm
-    # ceiling here cleanly separates InP QD from phosphor red.
-    if (green and red
-            and ((green_fwhm < 38 and red_fwhm < 48)
-                 or (red_fwhm < 38 and green_fwhm < 48))):
-        return 'QD-LCD', 'medium', '; '.join(notes) + '; asymmetric QD peaks'
+    # NOTE: previous versions had an "asymmetric QD" branch that promoted
+    # green-narrow / red-broad sets to QD-LCD on the theory that some InP
+    # QD reds run wider. Per Nanosys: a hybrid stack with green-only QD
+    # plus a phosphor red is Pseudo QD by definition (partial QD content),
+    # not full QD-LCD. So QD-LCD now strictly requires BOTH channels
+    # narrow (green & red < NARROW_FWHM via the branch above). Hybrids
+    # like LG QNED90T (G:36.6, R:44.8 — green InP QD, broad phosphor red)
+    # correctly fall through to Pseudo QD below.
 
     # --- Pseudo QD ---
     # Moderate green and/or red peaks (not narrow enough for true QD, not broad for WLED).
