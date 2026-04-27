@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.6.1"
+VERSION = "2.6.2"
 CHANGELOG = """\
+**v2.6.2** \u2014 2026-04-27
+- TV Overview: move Best-Of section below the hero charts (Tech Cost per m\u00b2 + primary score) so it doesn't push them down. Replace the side bar charts with a single donut chart + toggle for including notable mentions. Tables stack on the left.
+
 **v2.6.1** \u2014 2026-04-27
 - Best-Of TV section: split Notable Mentions into its own sub-section with separate table + tech-share chart. Backfilled 5 historical snapshots (2025-07-17, 2025-10-27, 2025-12-12, 2026-02-04, 2026-03-27) from RTINGS' on-page changelog. New "Composition over time" expander shows the QD-share trajectory \u2014 the list went 100% QD-family on 2025-10-27 when LG B4 was replaced by TCL QM8K. Closes #51.
 

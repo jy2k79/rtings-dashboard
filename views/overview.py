@@ -87,9 +87,6 @@ def render(fdf, pcfg, *, product_type=None, df=None):
     c4.metric("Avg Price", f"${priced['price_best'].mean():,.0f}" if len(priced) else "N/A")
     c5.metric("Avg $/m\u00b2", f"${priced['price_per_m2'].mean():,.0f}" if len(priced) else "N/A")
 
-    if product_type == "TVs":
-        _render_best_of_section(df if df is not None else fdf)
-
     st.divider()
 
     # --- Hero charts: Pricing & Performance at a glance ---
@@ -131,6 +128,9 @@ def render(fdf, pcfg, *, product_type=None, df=None):
                               yaxis=dict(range=axis_range(_primary, fdf)), **PL)
             fig.update_traces(marker=dict(size=7))
             st.plotly_chart(fig, use_container_width=True)
+
+    if product_type == "TVs":
+        _render_best_of_section(df if df is not None else fdf)
 
     st.divider()
 
@@ -202,8 +202,8 @@ def render(fdf, pcfg, *, product_type=None, df=None):
     st.plotly_chart(fig, use_container_width=True)
 
 
-def _tech_share_chart(subset: pd.DataFrame, height: int = 320) -> None:
-    """Horizontal bar chart of color_architecture counts in `subset`."""
+def _tech_share_pie(subset: pd.DataFrame, height: int = 360) -> None:
+    """Donut/pie of color_architecture counts in `subset`."""
     counts = (subset["color_architecture"]
               .fillna("Unknown")
               .value_counts()
@@ -216,16 +216,15 @@ def _tech_share_chart(subset: pd.DataFrame, height: int = 320) -> None:
         st.info("No classified picks in this group.")
         return
     colors = {**TECH_COLORS, "Unknown": "#555555"}
-    fig = px.bar(counts, x="Count", y="Technology",
-                 orientation="h", color="Technology",
-                 color_discrete_map=colors,
+    fig = px.pie(counts, names="Technology", values="Count",
+                 color="Technology", color_discrete_map=colors,
                  category_orders={"Technology": TECH_ORDER + ["Unknown"]},
-                 text="Count")
-    fig.update_traces(textposition="outside", textfont_size=14,
-                      textfont_weight=600, cliponaxis=False)
-    fig.update_layout(height=height, showlegend=False,
-                      xaxis_title="", yaxis_title="",
-                      margin=dict(l=0, r=30, t=10, b=0),
+                 hole=0.45)
+    fig.update_traces(textposition="outside", textinfo="label+percent",
+                      textfont_size=13)
+    fig.update_layout(height=height,
+                      legend_title_text="Technology",
+                      margin=dict(l=10, r=10, t=10, b=10),
                       **PL)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -298,31 +297,37 @@ def _render_best_of_section(df_full: pd.DataFrame) -> None:
     main_picks = best[~best["is_mention"]].copy()
     mentions = best[best["is_mention"]].copy()
 
-    # --- Main picks: list + tech share ---
-    st.markdown("**Category picks**")
+    # --- Tables on left, single pie on right ---
     list_col, chart_col = st.columns([3, 2])
+
     with list_col:
+        st.markdown("**Category picks**")
         display = main_picks.rename(columns={"fullname": "TV",
                                              "category": "Category"})
         display["Tech"] = display["color_architecture"].fillna("\u2014")
         st.dataframe(display[["Category", "TV", "Tech"]],
                      use_container_width=True, hide_index=True, height=240)
-    with chart_col:
-        _tech_share_chart(main_picks, height=240)
-    _qd_share_caption(main_picks)
 
-    # --- Notable mentions: list + tech share ---
-    if not mentions.empty:
-        st.markdown("**Notable mentions**")
-        m_list, m_chart = st.columns([3, 2])
-        with m_list:
+        if not mentions.empty:
+            st.markdown("**Notable mentions**")
             mdisplay = mentions.rename(columns={"fullname": "TV"})
             mdisplay["Tech"] = mdisplay["color_architecture"].fillna("\u2014")
             mdisplay["#"] = mdisplay["rank"].astype(int)
             st.dataframe(mdisplay[["#", "TV", "Tech"]],
                          use_container_width=True, hide_index=True, height=240)
-        with m_chart:
-            _tech_share_chart(mentions, height=240)
+
+    with chart_col:
+        st.markdown("**Tech share**")
+        include_mentions = st.toggle(
+            "Include notable mentions",
+            value=False,
+            help="Toggle to include the 6 notable mentions alongside "
+                 "the 6 category picks in the tech-share pie.",
+            key="best_of_include_mentions",
+        )
+        scope = best if include_mentions else main_picks
+        _tech_share_pie(scope, height=360)
+        _qd_share_caption(scope)
 
     # --- Composition over time (uses backfilled history) ---
     if _BEST_OF_HISTORY_CSV.exists():
