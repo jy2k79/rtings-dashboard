@@ -308,7 +308,7 @@
       "early_access": false,
       "first_published_at": "2022-05-03 10:54:59 -0400"
     },
-    "published_product_recommendation_count": 1,
+    "published_product_recommendation_count": 0,
     "status_discussion": {
       "url": "/discussions/G3bL06xFrHhobGxH/review-updates-apple-studio-display-2022",
       "user_comments_count": 12
@@ -553,7 +553,7 @@
       "early_access": false,
       "first_published_at": "2023-08-04 10:40:09 -0400"
     },
-    "published_product_recommendation_count": 3,
+    "published_product_recommendation_count": 2,
     "status_discussion": {
       "url": "/discussions/uKs97OdnOa7D7dS4/review-updates-samsung-odyssey-oled-g9-g95sc",
       "user_comments_count": 119
@@ -918,7 +918,7 @@
     "published": true,
     "reviewed_sku_id": "10003",
     "approximate_released_at": "2024-01-01 00:00:00 -0500",
-    "last_updated_at": "2026-04-08 14:36:02 -0400",
+    "last_updated_at": "2026-04-24 08:59:34 -0400",
     "review": {
       "test_bench": {
         "id": "238",
@@ -953,7 +953,7 @@
     "published": true,
     "reviewed_sku_id": "10182",
     "approximate_released_at": "2024-02-01 00:00:00 -0500",
-    "last_updated_at": "2026-03-17 13:18:49 -0400",
+    "last_updated_at": "2026-04-24 12:49:04 -0400",
     "review": {
       "test_bench": {
         "id": "238",
@@ -1078,7 +1078,7 @@
       "early_access": false,
       "first_published_at": "2024-05-03 13:01:50 -0400"
     },
-    "published_product_recommendation_count": 1,
+    "published_product_recommendation_count": 0,
     "status_discussion": {
       "url": "/discussions/psgRQ3Z9D6VwwkkQ/review-updates-dell-d",
       "user_comments_count": 95
@@ -1093,7 +1093,7 @@
     "published": true,
     "reviewed_sku_id": "10552",
     "approximate_released_at": "2024-03-19 00:00:00 -0400",
-    "last_updated_at": "2026-03-17 13:18:49 -0400",
+    "last_updated_at": "2026-04-24 12:45:27 -0400",
     "review": {
       "test_bench": {
         "id": "238",
@@ -1383,7 +1383,7 @@
     "published": true,
     "reviewed_sku_id": "11038",
     "approximate_released_at": "2024-05-30 00:00:00 -0400",
-    "last_updated_at": "2026-04-02 08:47:13 -0400",
+    "last_updated_at": "2026-04-24 08:59:32 -0400",
     "review": {
       "test_bench": {
         "id": "238",
@@ -2226,7 +2226,7 @@
     "published_product_recommendation_count": 3,
     "status_discussion": {
       "url": "/discussions/P5G5jACPPIsOoMgH/review-updates-dell-alienware-aw2725q",
-      "user_comments_count": 39
+      "user_comments_count": 40
     }
   },
   {
@@ -2643,7 +2643,7 @@
       "early_access": false,
       "first_published_at": "2025-08-26 10:07:38 -0400"
     },
-    "published_product_recommendation_count": 0,
+    "published_product_recommendation_count": 1,
     "status_discussion": {
       "url": "/discussions/RI91iZCLvMwG_LJM/review-updates-dell-alienware-aw2725qf",
       "user_comments_count": 66
@@ -2678,7 +2678,7 @@
       "early_access": false,
       "first_published_at": "2025-09-12 15:35:19 -0400"
     },
-    "published_product_recommendation_count": 13,
+    "published_product_recommendation_count": 12,
     "status_discussion": {
       "url": "/discussions/7WSUV5QfMmzU6AYd/review-updates-dell-s2725qc",
       "user_comments_count": 23
@@ -2748,7 +2748,7 @@
       "early_access": false,
       "first_published_at": "2025-10-06 13:15:01 -0400"
     },
-    "published_product_recommendation_count": 8,
+    "published_product_recommendation_count": 9,
     "status_discussion": {
       "url": "/discussions/WahEB9v4jbDYWpZH/review-updates-lg-24gs65f-b",
       "user_comments_count": 10
@@ -2923,7 +2923,7 @@
       "early_access": false,
       "first_published_at": "2025-11-13 12:16:01 -0500"
     },
-    "published_product_recommendation_count": 21,
+    "published_product_recommendation_count": 20,
     "status_discussion": {
       "url": "/discussions/V7UDxm_7vdF3uw28/review-updates-acer-nitro-xv275k-p5biipruzx",
       "user_comments_count": 36
@@ -2938,7 +2938,7 @@
     "published": true,
     "reviewed_sku_id": "15807",
     "approximate_released_at": "2025-10-16 00:00:00 -0400",
-    "last_updated_at": "2026-03-17 13:18:49 -0400",
+    "last_updated_at": "2026-04-24 08:59:37 -0400",
     "review": {
       "test_bench": {
         "id": "238",
@@ -3403,7 +3403,7 @@
       "early_access": false,
       "first_published_at": "2026-04-01 08:58:48 -0400"
     },
-    "published_product_recommendation_count": null,
+    "published_product_recommendation_count": 1,
     "status_discussion": {
       "url": "/discussions/1zkIhrNsClb7DvwA/review-updates-apple-studio-display-2026",
       "user_comments_count": 6
@@ -3453,7 +3453,7 @@
       "early_access": false,
       "first_published_at": "2026-04-14 10:22:08 -0400"
     },
-    "published_product_recommendation_count": null,
+    "published_product_recommendation_count": 1,
     "status_discussion": {
       "url": "/discussions/5_znTnMpujscDmrk/review-updates-apple-studio-display-xdr",
       "user_comments_count": 28
@@ -3488,10 +3488,45 @@
       "early_access": false,
       "first_published_at": "2026-04-17 11:34:35 -0400"
     },
-    "published_product_recommendation_count": 0,
+    "published_product_recommendation_count": 2,
     "status_discussion": {
       "url": "/discussions/P9zsb1jwr2t-Q2tg/review-updates-koorui-s2741lm",
-      "user_comments_count": 23
+      "user_comments_count": 25
+    }
+  },
+  {
+    "id": "128692",
+    "fullname": "LG 27GX704A-B",
+    "full_url_part": "lg-27gx704a-b",
+    "url_part": "27gx704a-b",
+    "brand_name": "LG",
+    "published": true,
+    "reviewed_sku_id": "16637",
+    "approximate_released_at": "2025-09-16 20:00:01 -0400",
+    "last_updated_at": "2026-04-24 08:51:19 -0400",
+    "review": {
+      "test_bench": {
+        "id": "238",
+        "display_name": "v2.1.2"
+      }
+    },
+    "image": "https://i.rtings.com/assets/products/m88oXwv8/lg-27gx704a-b/design-small.jpg?format=auto",
+    "variant_skus": [
+      {
+        "id": "16637",
+        "name": "27GX704A-B",
+        "variation": "27\""
+      }
+    ],
+    "page": {
+      "url": "/monitor/reviews/lg/27gx704a-b",
+      "early_access": false,
+      "first_published_at": "2026-04-24 08:51:19 -0400"
+    },
+    "published_product_recommendation_count": 1,
+    "status_discussion": {
+      "url": "/discussions/ZewJidnVwsYeeqf0/review-updates-lg-27gx704a-b",
+      "user_comments_count": 9
     }
   }
 ]

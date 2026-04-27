@@ -68,6 +68,7 @@ product_id,fullname,brand,url_part,panel_type,spd_classification,spd_confidence,
 48867,LG 27GR95UM-B,LG,lg-27gr95um-b,LCD,QD-LCD,high,,,NO_GT,454.2,17.0,537.8,35.3,626.1,37.3,3,B:454nm/17nm; G:538nm/35nm; R:626nm/37nm,spd_images/monitors/lg-27gr95um-b_spd.jpg
 49556,LG 27GS95QE-B,LG,lg-27gs95qe-b,OLED,WOLED,high,,,NO_GT,452.8,24.7,558.8,113.2,,,2,B:453nm/25nm; G:559nm/113nm; No red; panel_sub_type=WOLED,spd_images/monitors/lg-27gs95qe-b_spd.jpg
 117624,LG 27GX700A-B,LG,lg-27gx700a-b,OLED,WOLED,high,,,NO_GT,451.7,21.4,533.4,32.0,626.1,37.7,3,B:452nm/21nm; G:533nm/32nm; R:626nm/38nm; panel_sub_type=WOLED,spd_images/monitors/lg-27gx700a-b_spd.jpg
+128692,LG 27GX704A-B,LG,lg-27gx704a-b,OLED,WOLED,high,,,NO_GT,455.5,25.0,561.8,109.1,,,2,B:455nm/25nm; G:562nm/109nm; No red; panel_sub_type=WOLED,spd_images/monitors/lg-27gx704a-b_spd.jpg
 82807,LG 27GX790A-B,LG,lg-27gx790a-b,OLED,WOLED,high,,,NO_GT,452.6,24.6,559.0,116.5,,,2,B:453nm/25nm; G:559nm/117nm; No red; panel_sub_type=WOLED,spd_images/monitors/lg-27gx790a-b_spd.jpg
 127454,LG 27GX790B-B,LG,lg-27gx790b-b,OLED,WOLED,high,,,NO_GT,451.0,21.4,533.3,35.9,625.8,38.6,3,B:451nm/21nm; G:533nm/36nm; R:626nm/39nm; panel_sub_type=WOLED,spd_images/monitors/lg-27gx790b-b_spd.jpg
 40717,LG 32GR93U-B,LG,lg-32gr93u-b,LCD,KSF,high,,,NO_GT,455.6,17.0,533.1,50.0,630.3,9.0,4,B:456nm/17nm; G:533nm/50nm; R:630nm/9nm; G:fwhm_via_hwhm_left,spd_images/monitors/lg-32gr93u-b_spd.jpg
