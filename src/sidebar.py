@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.6.7"
+VERSION = "2.6.8"
 CHANGELOG = """\
+**v2.6.8** \u2014 2026-04-27
+- Recolor WLED from muted blue-gray (#A8BDD0) to neutral gray (#6E7681) so it no longer blends with KSF's sky blue. Applied across all chart sources (src/charts.py, report_charts.py, dashboard.py inline JS map, cross_product.py "Non-QD" pie/bar slices).
+
 **v2.6.7** \u2014 2026-04-27
 - Reverse the QNED90T classification: hybrid stacks (green-only QD + broad phosphor red) are Pseudo QD, not QD-LCD. Removed the "asymmetric QD" branch \u2014 QD-LCD now strictly requires both green AND red narrow. Added 1nm tolerance on the red ceiling so borderline-narrow QD reds (Samsung 100QN80F R:40.4) stay with the QN family. Net: only QNED90T moves back to Pseudo QD.
 

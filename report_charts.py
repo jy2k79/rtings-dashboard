@@ -26,7 +26,7 @@ TECH_COLORS = {
     "QD-LCD": "#FFC700",
     "Pseudo QD": "#FF7E43",
     "KSF": "#90BFFF",
-    "WLED": "#A8BDD0",
+    "WLED": "#6E7681",  # neutral gray — baseline tech, no spectral enhancement
 }
 
 TECH_ORDER = ["WLED", "KSF", "Pseudo QD", "QD-LCD", "WOLED", "QD-OLED"]

@@ -114,7 +114,7 @@ def render(df):
                      color="QD Status",
                      color_discrete_map={
                          "QD (QD-LCD + QD-OLED)": "#FF009F",
-                         "Non-QD": "#A8BDD0",
+                         "Non-QD": "#6E7681",
                      },
                      hole=0.4)
         fig.update_traces(textinfo="percent+value", textfont_size=14, textfont_weight=600)
@@ -127,7 +127,7 @@ def render(df):
         _qd_by_type = (df.groupby(["Product Type", "qd_present"], observed=True)
                         .size().reset_index(name="Count"))
         fig = px.bar(_qd_by_type, x="Product Type", y="Count", color="qd_present",
-                     color_discrete_map={"Yes": "#FF009F", "No": "#A8BDD0"},
+                     color_discrete_map={"Yes": "#FF009F", "No": "#6E7681"},
                      barmode="stack", text="Count",
                      labels={"qd_present": "QD Present"})
         fig.update_traces(textposition="inside", textfont_size=13, textfont_weight=600)

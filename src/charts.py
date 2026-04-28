@@ -13,7 +13,7 @@ TECH_COLORS = {
     "QD-LCD": "#FFC700",     # Nanosys gold
     "Pseudo QD": "#FF7E43",  # Nanosys orange
     "KSF": "#90BFFF",        # Nanosys sky blue
-    "WLED": "#A8BDD0",       # muted blue-gray
+    "WLED": "#6E7681",       # neutral gray — baseline tech, no spectral enhancement
 }
 
 DISPLAY_TYPE_COLORS = {

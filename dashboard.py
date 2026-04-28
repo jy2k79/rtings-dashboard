@@ -130,7 +130,7 @@ components.html("""
 
     var colorMap = {
         'QD-OLED': '#FF009F', 'WOLED': '#4B40EB', 'QD-LCD': '#FFC700',
-        'Pseudo QD': '#FF7E43', 'KSF': '#90BFFF', 'WLED': '#A8BDD0',
+        'Pseudo QD': '#FF7E43', 'KSF': '#90BFFF', 'WLED': '#6E7681',
         'OLED': '#4B40EB', 'LCD': '#FFC700'
     };
 
