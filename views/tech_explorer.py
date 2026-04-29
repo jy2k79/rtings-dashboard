@@ -423,10 +423,9 @@ def render(fdf, pcfg):
                          color="Direction",
                          color_discrete_map={"Positive": "#4B40EB", "Negative": "#FF009F"},
                          text=corr_df["Correlation"].apply(lambda x: f"{x:.2f}"))
-            fig.add_vline(x=0, line_color="white", line_width=1)
             fig.update_layout(
                 height=450, showlegend=False,
-                xaxis=dict(range=[-1, 1],
+                xaxis=dict(range=[0, 1.05],
                            title=f"Correlation with {_ps_label} (\u2193 = lower-is-better metric, sign flipped)"),
                 yaxis_title="",
                 margin=dict(l=0, r=60, t=10, b=0),

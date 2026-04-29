@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.6.9"
+VERSION = "2.6.10"
 CHANGELOG = """\
+**v2.6.10** \u2014 2026-04-29
+- Mixed Usage Drivers: clip the correlation axis to [0, 1] now that sign-flipping puts every driver on the positive side. Drops the dead negative half-axis and roughly doubles the bar resolution.
+
 **v2.6.9** \u2014 2026-04-29
 - Mixed Usage Drivers correlation chart: flip the sign for lower-is-better metrics (Response Time, 4K Input Lag) so they read as positive drivers like every other bar. Each flipped row gets a \u2193 suffix so it's still transparent that the raw Pearson is negative.
 
