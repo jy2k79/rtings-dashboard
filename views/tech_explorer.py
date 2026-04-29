@@ -388,6 +388,13 @@ def render(fdf, pcfg):
             "total_response_time_ms": "Response Time",
             pcfg["input_lag_col"]: friendly(pcfg["input_lag_col"]),
         }
+        # "Lower is better" metrics — their raw Pearson correlation with
+        # mixed_usage will be negative (high lag → low score), but the
+        # underlying driver relationship is positive (lower lag drives
+        # higher scores). Flip the sign on display and tag the label
+        # with ↓ so the chart reads as "drivers of higher scores".
+        inverted_metrics = {"total_response_time_ms", pcfg["input_lag_col"]}
+
         corr_metrics = {k: v for k, v in _all_corr_metrics.items() if k in fdf.columns}
         corr_data = []
         for col, label in corr_metrics.items():
@@ -395,6 +402,9 @@ def render(fdf, pcfg):
                 valid = fdf[[_ps, col]].dropna()
                 if len(valid) > 5:
                     r = valid[_ps].corr(valid[col])
+                    if col in inverted_metrics:
+                        r = -r
+                        label = f"{label} \u2193"  # ↓ flag
                     corr_data.append({"Metric": label, "col": col, "Correlation": r})
 
         if not corr_data:
@@ -416,7 +426,8 @@ def render(fdf, pcfg):
             fig.add_vline(x=0, line_color="white", line_width=1)
             fig.update_layout(
                 height=450, showlegend=False,
-                xaxis=dict(range=[-1, 1], title=f"Pearson Correlation with {_ps_label}"),
+                xaxis=dict(range=[-1, 1],
+                           title=f"Correlation with {_ps_label} (\u2193 = lower-is-better metric, sign flipped)"),
                 yaxis_title="",
                 margin=dict(l=0, r=60, t=10, b=0),
                 **PL,

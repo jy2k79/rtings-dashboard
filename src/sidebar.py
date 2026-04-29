@@ -16,8 +16,11 @@ from src.data_loader import PRODUCT_CONFIGS, get_screen_area_map
 
 LOGO_PATH = Path(__file__).parent.parent / "assets" / "logo_white.png"
 
-VERSION = "2.6.8"
+VERSION = "2.6.9"
 CHANGELOG = """\
+**v2.6.9** \u2014 2026-04-29
+- Mixed Usage Drivers correlation chart: flip the sign for lower-is-better metrics (Response Time, 4K Input Lag) so they read as positive drivers like every other bar. Each flipped row gets a \u2193 suffix so it's still transparent that the raw Pearson is negative.
+
 **v2.6.8** \u2014 2026-04-27
 - Recolor WLED from muted blue-gray (#A8BDD0) to neutral gray (#6E7681) so it no longer blends with KSF's sky blue. Applied across all chart sources (src/charts.py, report_charts.py, dashboard.py inline JS map, cross_product.py "Non-QD" pie/bar slices).
 
