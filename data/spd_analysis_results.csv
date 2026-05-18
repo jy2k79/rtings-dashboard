@@ -1,5 +1,5 @@
 product_id,fullname,brand,url_part,panel_type,spd_classification,spd_confidence,ground_truth_tech,ground_truth_qd_type,match_status,blue_peak_nm,blue_fwhm_nm,green_peak_nm,green_fwhm_nm,red_peak_nm,red_fwhm_nm,num_peaks,notes,spd_image_local
-82692,Amazon Fire TV Omni Mini-LED Series,Amazon,amazon-fire-tv-omni-mini-led-series,LCD,KSF,high,,,NO_GT,445.9,16.7,533.2,46.0,632.0,9.1,5,B:446nm/17nm; G:533nm/46nm; R:632nm/9nm,spd_images/amazon-fire-tv-omni-mini-led-series_spd.jpg
+82692,Amazon Ember Mini-LED Series,Amazon,amazon-ember-mini-led-series,LCD,KSF,high,,,NO_GT,445.9,16.7,533.2,46.0,632.0,9.1,5,B:446nm/17nm; G:533nm/46nm; R:632nm/9nm,spd_images/amazon-ember-mini-led-series_spd.jpg
 117447,Hisense 100U8QG,Hisense,hisense-100u8qg,LCD,KSF,high,,,NO_GT,446.6,15.7,533.4,51.0,632.0,9.0,5,B:447nm/16nm; G:533nm/51nm; R:632nm/9nm,spd_images/hisense-100u8qg_spd.jpg
 61045,Hisense 75U8N,Hisense,hisense-75u8n,LCD,QD-LCD,high,,,NO_GT,447.8,16.1,536.4,25.4,625.9,21.6,3,B:448nm/16nm; G:536nm/25nm; R:626nm/22nm,spd_images/hisense-75u8n_spd.jpg
 102827,Hisense 98QD5QG,Hisense,hisense-98qd5qg,LCD,KSF,high,,,NO_GT,446.3,16.5,534.5,49.3,632.0,9.1,5,B:446nm/17nm; G:534nm/49nm; R:632nm/9nm,spd_images/hisense-98qd5qg_spd.jpg
@@ -90,6 +90,7 @@ product_id,fullname,brand,url_part,panel_type,spd_classification,spd_confidence,
 88608,TCL QM7K,TCL,tcl-qm7k,LCD,QD-LCD,high,,,NO_GT,448.0,16.0,538.0,23.1,624.1,27.2,3,B:448nm/16nm; G:538nm/23nm; R:624nm/27nm,spd_images/tcl-qm7k_spd.jpg
 60898,TCL QM851G,TCL,tcl-qm851g,LCD,QD-LCD,high,,,NO_GT,446.1,15.5,537.5,25.2,624.4,22.9,3,B:446nm/16nm; G:538nm/25nm; R:624nm/23nm,spd_images/tcl-qm851g_spd.jpg
 101781,TCL QM8K,TCL,tcl-qm8k,LCD,QD-LCD,high,,,NO_GT,448.0,15.3,536.2,22.7,626.6,27.6,3,B:448nm/15nm; G:536nm/23nm; R:627nm/28nm,spd_images/tcl-qm8k_spd.jpg
+136482,TCL QM8L,TCL,tcl-qm8l,LCD,QD-LCD,high,,,NO_GT,443.9,14.7,530.2,25.3,642.0,22.3,3,B:444nm/15nm; G:530nm/25nm; R:642nm/22nm,spd_images/tcl-qm8l_spd.jpg
 112536,TCL QM9K,TCL,tcl-qm9k,LCD,QD-LCD,high,,,NO_GT,446.3,14.9,536.0,22.8,626.0,27.8,3,B:446nm/15nm; G:536nm/23nm; R:626nm/28nm,spd_images/tcl-qm9k_spd.jpg
 60900,TCL S551G,TCL,tcl-s551g,LCD,KSF,high,,,NO_GT,448.1,15.6,532.1,47.5,632.0,9.0,5,B:448nm/16nm; G:532nm/47nm; R:632nm/9nm,spd_images/tcl-s551g_spd.jpg
 127258,TCL X11L,TCL,tcl-x11l,LCD,QD-LCD,high,,,NO_GT,448.2,16.5,527.1,21.9,647.4,21.3,3,B:448nm/17nm; G:527nm/22nm; R:647nm/21nm,spd_images/tcl-x11l_spd.jpg
